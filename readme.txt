@@ -1,104 +1,106 @@
 === Patsch9 Accounting Bridge for WooCommerce ===
 Contributors: patsch9
-Tags: woocommerce, lexware, rechnung, buchhaltung, api
+Tags: woocommerce, lexware, invoices, accounting, api
 Requires at least: 6.9.5
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.2
 Stable tag: 2026.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Verbindet WooCommerce mit der Lexware Office Public API für Rechnungen, Gutschriften, Kundenbezug und Belegzugriff.
+Connects WooCommerce with the Lexware Office Public API for invoices, credit notes, customer matching, queues, and document access.
 
 == Description ==
 
-Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public API. Das Plugin erstellt und verwaltet Rechnungen bzw. Gutschriften aus WooCommerce-Bestellungen, verarbeitet Übertragungen über eine Queue und kann Rechnungsdokumente im Kundenbereich bereitstellen.
+Patsch9 Accounting Bridge connects WooCommerce with the Lexware Office Public API. It can create and manage invoices and credit notes from WooCommerce orders, process synchronization jobs through a queue, and make invoice documents available in the customer account.
 
-**Markenhinweis:** WooCommerce® ist eine Marke von Automattic Inc. Lexware® und Lexware Office sind Marken bzw. Produktbezeichnungen der Haufe-Lexware GmbH & Co. KG. Dieses Plugin ist eine unabhängige Drittanbieter-Erweiterung und wird weder von Automattic noch von Haufe-Lexware herausgegeben, gesponsert oder unterstützt.
+The plugin declares WooCommerce High-Performance Order Storage (HPOS) compatibility and uses WooCommerce order CRUD APIs for order data.
 
-== Funktionen ==
+**Trademark notice:** WooCommerce® is a trademark of Automattic Inc. Lexware® and Lexware Office are trademarks or product names of Haufe-Lexware GmbH & Co. KG. This is an independent third-party extension and is not produced, sponsored, or endorsed by Automattic or Haufe-Lexware.
 
-* Automatische oder manuelle Rechnungserstellung.
-* Sichere Kontaktzuordnung anhand exakter E-Mail-Adressen.
-* Queue-basierte Verarbeitung mit Deduplizierung und Sperrmechanismus.
-* Action Scheduler mit WP-Cron-Fallback.
-* Gutschriften auf Basis des ursprünglichen Lexware-Rechnungssnapshots.
-* Rechnungsdownload und WooCommerce-Kundenbereich.
-* WooCommerce-E-Mail-Integration.
-* Optionale Verarbeitung von Mietkautions-Metadaten ohne harte Abhängigkeit von einem Vermietungsplugin.
-* HPOS-Kompatibilität.
+== Features ==
 
-== Voraussetzungen ==
+* Automatic or manual invoice creation from WooCommerce orders.
+* Exact email based Lexware customer matching.
+* Queue-based processing with deduplication and locking.
+* Action Scheduler integration with WP-Cron fallback.
+* Credit notes based on the original Lexware invoice snapshot.
+* Invoice download and WooCommerce My Account integration.
+* WooCommerce email integration.
+* Optional handling of rental deposit metadata without a hard dependency on a rental plugin.
+* HPOS compatibility.
+* Conservative handling of ambiguous write responses to reduce duplicate accounting documents.
 
-* WordPress 6.9.5 oder neuer.
-* PHP 8.2 oder neuer.
-* WooCommerce 10.9.4 oder neuer.
-* Lexware Office Konto mit freigeschaltetem Public-API-Zugang.
-* Gültiger Lexware API-Key.
+== Requirements ==
+
+* WordPress 6.9.5 or newer.
+* PHP 8.2 or newer.
+* WooCommerce 10.9.4 or newer.
+* A Lexware Office account with Public API access enabled.
+* A valid Lexware API key.
 
 == Installation ==
 
-1. WooCommerce installieren und aktivieren.
-2. Plugin-ZIP hochladen und aktivieren.
-3. Lexware API-Key konfigurieren.
-4. Trigger-Status und gewünschte Synchronisationsoptionen festlegen.
+1. Install and activate WooCommerce.
+2. Upload and activate this plugin.
+3. Configure the Lexware API key.
+4. Configure the order statuses and synchronization options that should trigger invoice processing.
 
-== Konfiguration ==
+== Configuration ==
 
-Für höhere Sicherheit kann der API-Key außerhalb der WordPress-Datenbank in `wp-config.php` gesetzt werden:
+For improved secret handling, the Lexware API key can be stored outside the WordPress database in `wp-config.php`:
 
-`define( 'LEXWARE_CONNECTOR_API_KEY', 'DEIN_API_KEY' );`
+`define( 'LEXWARE_CONNECTOR_API_KEY', 'YOUR_API_KEY' );`
 
-Die Konstante hat Vorrang vor einem in WordPress gespeicherten Schlüssel.
+The constant takes precedence over a key stored in WordPress options.
 
 == External Services ==
 
 = Lexware Office Public API =
 
-Das Plugin nutzt die Lexware Office Public API unter `https://api.lexware.io/v1/`. Diese externe Verbindung ist Kernfunktion des Plugins. Je nach ausgeführter Aktion werden insbesondere Kundenname, Rechnungs-/Lieferadresse, E-Mail-Adresse, Bestellpositionen, Preise, Steuern, Versand-/Gebührenpositionen und Bestellreferenzen an Lexware übertragen. Der API-Key wird zur Authentifizierung übermittelt.
+The Lexware Office Public API at `https://api.lexware.io/v1/` is a core service required by this plugin. Depending on the action, data sent to Lexware may include customer names, billing and shipping addresses, email addresses, order items, prices, taxes, shipping or fee items, and order references. The API key is transmitted for authentication.
 
-Entwicklerportal: https://developers.lexware.io/
-API-Dokumentation: https://developers.lexware.io/docs/
-Public-API-Bedingungen: https://agb.lexware.de/lexware-office/public-api-lizenz--und-nutzungsbedingungen
-Datenschutz: https://www.lexware.de/datenschutz/
+Developer portal: https://developers.lexware.io/
+API documentation: https://developers.lexware.io/docs/
+Public API terms: https://agb.lexware.de/lexware-office/public-api-lizenz--und-nutzungsbedingungen
+Privacy policy: https://www.lexware.de/datenschutz/
 
-Der Website-Betreiber ist für die korrekte Datenschutzinformation und die Einhaltung der anwendbaren Lexware-Bedingungen verantwortlich.
+The site operator is responsible for providing the required privacy information and for complying with the applicable Lexware terms.
 
-== Datenschutz ==
+== Privacy ==
 
-API-Logging ist bei Neuinstallationen standardmäßig deaktiviert. Bei aktiviertem Logging werden bekannte personenbezogene Felder maskiert und vollständige API-Antwortkörper nicht dauerhaft gespeichert.
+API logging is disabled by default on new installations. When logging is enabled, known personal-data fields are masked and complete API response bodies are not stored permanently.
 
-== Kompatibilität ==
+== Compatibility ==
 
-* WooCommerce HPOS wird deklariert.
-* Bestelldaten werden über WooCommerce-CRUD verarbeitet.
-* Action Scheduler wird verwendet, wenn verfügbar; WP-Cron dient als Fallback.
-* Historische interne `WLC_*`- und `wlc_*`-Bezeichner bleiben aus Gründen der Abwärtskompatibilität erhalten.
+* WooCommerce HPOS compatibility is declared.
+* WooCommerce order data is accessed through the WooCommerce CRUD API.
+* Action Scheduler is used when available; WP-Cron is used as a fallback.
+* Historical internal `WLC_*` and `wlc_*` identifiers remain unchanged for backward compatibility.
 
 == Frequently Asked Questions ==
 
-= Benötige ich einen Lexware-Account? =
+= Do I need a Lexware account? =
 
-Ja. Ein aktiver Lexware-Account mit freigeschaltetem API-Zugang ist erforderlich.
+Yes. An active Lexware Office account with Public API access is required.
 
-= Welche Daten werden übertragen? =
+= What data is transferred? =
 
-Die für Kontakt- und Belegerstellung notwendigen Kunden-, Bestell-, Positions-, Preis-, Steuer- und Referenzdaten werden an die Lexware Office Public API übertragen.
+The customer, order, line-item, price, tax, and reference data required to create or retrieve contacts and accounting documents is transferred to the Lexware Office Public API.
 
-= Werden Daten beim Löschen des Plugins entfernt? =
+= Is plugin data removed when the plugin is deleted? =
 
-Standardmäßig nein. Eine vollständige Datenbereinigung bei Deinstallation muss ausdrücklich in den Einstellungen aktiviert werden.
+Not by default. Full data cleanup on uninstall must be explicitly enabled in the plugin settings.
 
 == Changelog ==
 
 = 2026.10.0 =
-* Erstes stabiles öffentliches Release im neuen projektweiten Versionsschema `YYYY.M.PATCH`.
-* Enthält den konsolidierten Funktions- und Sicherheitsstand aller bisherigen internen Vorabversionen bis einschließlich 1.3.6.
-* Dokumentation vollständig vereinheitlicht und auf Deutsch aktualisiert.
-* API-Schreibvorgänge, Queue-Sperren, Gutschriftlogik, HPOS-Pfade und geschützte Rechnungsdownloads erneut verifiziert.
-* Buchhaltungs- und Queue-Daten bleiben bei Deinstallation standardmäßig erhalten; destruktive Bereinigung erfordert ein ausdrückliches Opt-in.
+* First stable public release using the project-wide `YYYY.M.PATCH` versioning scheme.
+* Consolidates the functional and security changes from all previous internal prerelease versions through 1.3.6.
+* Revalidated API write handling, queue locking, credit-note logic, HPOS order access, and protected invoice downloads.
+* Accounting mappings and queue data are preserved on uninstall by default; destructive cleanup requires explicit opt-in.
 
 == Upgrade Notice ==
 
 = 2026.10.0 =
-Erstes stabiles Release der neuen öffentlichen Versionslinie. Bestehende Installationen aus der Vorabphase sollten vor dem Update gesichert und anschließend mit einem Testbeleg geprüft werden.
+First stable release of the new public version line. Back up existing prerelease installations and verify the connection with a test document after upgrading.
