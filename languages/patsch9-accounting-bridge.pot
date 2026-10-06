@@ -1,0 +1,21 @@
+# Translation template for Patsch9 Accounting Bridge for WooCommerce
+# Created on 2025-11-12
+#
+# Place all .po and .mo files for translations in this folder.
+#
+# This .pot file includes sample entries and WordPress translators comments.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Patsch9 Accounting Bridge 2026.10.0
+"
+"Report-Msgid-Bugs-To: https://github.com/patsch9/patsch9-accounting-bridge/issues\n"
+"POT-Creation-Date: 2025-11-12 12:26+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: German\n"
+
+#, translators: %s: Vorname des Kunden
+msgid "Hallo %s,"
+msgstr ""

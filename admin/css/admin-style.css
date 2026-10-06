@@ -1,0 +1,11 @@
+.wlc-settings-wrap {
+    max-width: 1200px;
+}
+
+.wlc-settings-wrap .form-table th {
+    width: 250px;
+}
+
+.wlc-settings-wrap .nav-tab-wrapper {
+    margin-bottom: 20px;
+}
