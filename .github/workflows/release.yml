@@ -161,7 +161,7 @@ jobs:
 
       - name: Store release assets
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-assets
           path: |
@@ -177,8 +177,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
       - name: Download verified release assets
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-assets
 
@@ -186,6 +192,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.build.outputs.version }}
           PRERELEASE: ${{ needs.build.outputs.prerelease }}
           SLUG: patsch9-accounting-bridge
@@ -196,6 +203,7 @@ jobs:
             release create "$GITHUB_REF_NAME"
             "${SLUG}-${VERSION}.zip"
             "${SLUG}-${VERSION}.zip.sha256"
+            --repo "$GH_REPO"
             --verify-tag
             --title "${RELEASE_TITLE} ${VERSION}"
             --generate-notes
