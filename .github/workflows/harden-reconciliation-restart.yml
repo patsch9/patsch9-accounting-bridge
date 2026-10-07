@@ -1,0 +1,52 @@
+name: Harden reconciliation restart
+
+on:
+  push:
+    paths:
+      - '.github/workflows/harden-reconciliation-restart.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: feature/manual-reconciliation-control
+      - name: Add active-run guard
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('includes/class-invoice-reconciler.php')
+          text = path.read_text(encoding='utf-8')
+
+          old = """    /**\n     * Start a completely new historical scan without touching existing links.\n     *\n     * Already linked orders remain untouched. Orders previously checked without\n     * a match are rechecked because Lexware may have gained invoices since the\n     * original scan.\n     *\n     * @return int|bool Action ID / scheduling result.\n     */\n    public function restart_scan() {\n        $api_client = new WLC_API_Client();\n        if (!$api_client->is_configured()) {\n            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);\n            return false;\n        }\n\n        $this->cleanup_scheduler();\n"""
+          new = """    /**\n     * Check whether a non-stale reconciliation worker currently owns the lock.\n     *\n     * @return bool\n     */\n    private function is_batch_lock_active() {\n        $locked_at = absint(get_option(self::LOCK_OPTION, 0));\n        if (!$locked_at) {\n            return false;\n        }\n\n        if ((time() - $locked_at) >= self::LOCK_TTL) {\n            delete_option(self::LOCK_OPTION);\n            return false;\n        }\n\n        return true;\n    }\n\n    /**\n     * Start a completely new historical scan without touching existing links.\n     *\n     * Already linked orders remain untouched. Orders previously checked without\n     * a match are rechecked because Lexware may have gained invoices since the\n     * original scan.\n     *\n     * @return int|bool|WP_Error Action ID / scheduling result or busy state.\n     */\n    public function restart_scan() {\n        $api_client = new WLC_API_Client();\n        if (!$api_client->is_configured()) {\n            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);\n            return false;\n        }\n\n        if ($this->is_batch_lock_active()) {\n            update_option('wlc_invoice_reconciliation_status', 'running', false);\n            return new WP_Error(\n                'reconciliation_busy',\n                __('Der historische Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen verhindert.', 'patsch9-accounting-bridge')\n            );\n        }\n\n        $this->cleanup_scheduler();\n"""
+          if old not in text:
+              raise SystemExit('restart_scan block not found')
+          text = text.replace(old, new, 1)
+
+          old = """        $result = $this->restart_scan();\n        $notice = $result ? 'started' : 'error';\n"""
+          new = """        $result = $this->restart_scan();\n        if (is_wp_error($result)) {\n            $notice = 'reconciliation_busy' === $result->get_error_code() ? 'busy' : 'error';\n        } else {\n            $notice = $result ? 'started' : 'error';\n        }\n"""
+          if old not in text:
+              raise SystemExit('manual handler block not found')
+          text = text.replace(old, new, 1)
+
+          old = """        if ('started' === $notice) {\n            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich wurde neu gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';\n        } elseif ('error' === $notice) {\n            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich konnte nicht gestartet werden. Bitte API-Konfiguration und Fehlerstatus prüfen.', 'patsch9-accounting-bridge') . '</strong></p>';\n        }\n"""
+          new = """        if ('started' === $notice) {\n            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich wurde neu gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';\n        } elseif ('busy' === $notice) {\n            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen nicht gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';\n        } elseif ('error' === $notice) {\n            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich konnte nicht gestartet werden. Bitte API-Konfiguration und Fehlerstatus prüfen.', 'patsch9-accounting-bridge') . '</strong></p>';\n        }\n"""
+          if old not in text:
+              raise SystemExit('notice block not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - name: Validate and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l includes/class-invoice-reconciler.php
+          git diff --check
+          git config user.name 'Patrick Schmidt'
+          git config user.email '47031716+patsch9@users.noreply.github.com'
+          git add includes/class-invoice-reconciler.php
+          git commit -m 'Guard manual reconciliation restart against active workers'
+          git push origin HEAD:feature/manual-reconciliation-control
