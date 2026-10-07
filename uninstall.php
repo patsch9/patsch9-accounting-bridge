@@ -51,15 +51,16 @@ foreach ($options_to_delete as $option) {
 // WooCommerce being active during uninstall.
 foreach (array('wlc_payment_terms_', 'wlc_payment_due_days_') as $prefix) {
     $like = $wpdb->esc_like($prefix) . '%';
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit opt-in uninstall cleanup of dynamically named plugin options; cached state is irrelevant during removal.
     $wpdb->query($wpdb->prepare(
         "DELETE FROM %i WHERE option_name LIKE %s",
         $wpdb->options,
         $like
-    )); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+    ));
 }
 
 $table = $wpdb->prefix . 'wlc_queue';
-$wpdb->query($wpdb->prepare("DROP TABLE IF EXISTS %i", $table)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange
+$wpdb->query($wpdb->prepare("DROP TABLE IF EXISTS %i", $table)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit opt-in uninstall cleanup of the plugin-owned queue table.
 
 $meta_keys = array(
     '_wlc_lexware_invoice_id',
@@ -84,7 +85,7 @@ $hpos_meta_table = $wpdb->prefix . 'wc_orders_meta';
 $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($hpos_meta_table))); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 if ($table_exists === $hpos_meta_table) {
     foreach ($meta_keys as $meta_key) {
-        $wpdb->delete($hpos_meta_table, array('meta_key' => $meta_key), array('%s')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $wpdb->delete($hpos_meta_table, array('meta_key' => $meta_key), array('%s')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- One-time explicit opt-in uninstall cleanup of plugin metadata when WooCommerce may already be inactive.
     }
 }
 
@@ -111,8 +112,9 @@ if (empty($upload_dir['error'])) {
 
 delete_transient('wlc_api_test_result');
 foreach (array('_transient_wlc_rate_limit_', '_transient_timeout_wlc_rate_limit_') as $prefix) {
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit opt-in uninstall cleanup of plugin rate-limit transients; cached state is irrelevant during removal.
     $wpdb->query($wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
         $wpdb->esc_like($prefix) . '%'
-    )); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+    ));
 }
