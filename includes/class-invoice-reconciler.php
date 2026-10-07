@@ -31,7 +31,9 @@ class WLC_Invoice_Reconciler {
         add_action('init', array($this, 'maybe_schedule'), 30);
         add_action(self::HOOK, array($this, 'process_batch'), 10, 1);
         add_action('wlc_cleanup_scheduler', array($this, 'cleanup_scheduler'));
+        add_action('admin_post_wlc_restart_invoice_reconciliation', array($this, 'handle_manual_restart'));
         add_action('admin_notices', array($this, 'render_completion_notice'));
+        add_action('admin_notices', array($this, 'render_status_controls'));
     }
 
     public function maybe_schedule() {
@@ -41,6 +43,7 @@ class WLC_Invoice_Reconciler {
 
         $api_client = new WLC_API_Client();
         if (!$api_client->is_configured()) {
+            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
             return;
         }
 
@@ -49,31 +52,119 @@ class WLC_Invoice_Reconciler {
         }
 
         $page = max(1, absint(get_option('wlc_invoice_reconciliation_page', 1)));
-        $this->schedule_page($page);
+        $scheduled = $this->schedule_page($page);
+        if ($scheduled) {
+            update_option('wlc_invoice_reconciliation_status', 'scheduled', false);
+        }
     }
 
-    private function schedule_page($page) {
+    /**
+     * Schedule one reconciliation batch.
+     *
+     * @param int  $page      WooCommerce order page to process.
+     * @param bool $immediate Whether to enqueue asynchronously when possible.
+     * @return int|bool Action ID / scheduling result.
+     */
+    private function schedule_page($page, $immediate = false) {
         $page = max(1, absint($page));
         $args = array($page);
 
-        if (function_exists('as_has_scheduled_action') && function_exists('as_schedule_single_action')) {
-            if (!as_has_scheduled_action(self::HOOK, $args, self::GROUP)) {
-                as_schedule_single_action(time() + 5, self::HOOK, $args, self::GROUP, true);
+        if (function_exists('as_has_scheduled_action')) {
+            if (as_has_scheduled_action(self::HOOK, $args, self::GROUP)) {
+                return true;
             }
-            return;
+
+            if ($immediate && function_exists('as_enqueue_async_action')) {
+                return as_enqueue_async_action(self::HOOK, $args, self::GROUP, true);
+            }
+
+            if (function_exists('as_schedule_single_action')) {
+                return as_schedule_single_action(time() + 5, self::HOOK, $args, self::GROUP, true);
+            }
         }
 
         if (!wp_next_scheduled(self::HOOK, $args)) {
-            wp_schedule_single_event(time() + 10, self::HOOK, $args);
+            return wp_schedule_single_event(time() + ($immediate ? 1 : 10), self::HOOK, $args);
         }
+
+        return true;
     }
 
     public function cleanup_scheduler() {
         if (function_exists('as_unschedule_all_actions')) {
-            as_unschedule_all_actions(self::HOOK);
+            as_unschedule_all_actions(self::HOOK, array(), self::GROUP);
         }
         wp_clear_scheduled_hook(self::HOOK);
         delete_option(self::LOCK_OPTION);
+    }
+
+    /**
+     * Start a completely new historical scan without touching existing links.
+     *
+     * Already linked orders remain untouched. Orders previously checked without
+     * a match are rechecked because Lexware may have gained invoices since the
+     * original scan.
+     *
+     * @return int|bool Action ID / scheduling result.
+     */
+    public function restart_scan() {
+        $api_client = new WLC_API_Client();
+        if (!$api_client->is_configured()) {
+            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
+            return false;
+        }
+
+        $this->cleanup_scheduler();
+
+        update_option('wlc_invoice_reconciliation_cutoff', time(), false);
+        update_option('wlc_invoice_reconciliation_page', 1, false);
+        delete_option('wlc_invoice_reconciliation_max_pages');
+        delete_option('wlc_invoice_reconciliation_version');
+        delete_option('wlc_invoice_reconciliation_last_error');
+        delete_option('wlc_invoice_reconciliation_notice_pending');
+        update_option('wlc_invoice_reconciliation_force_recheck', 'yes', false);
+        update_option('wlc_invoice_reconciliation_started_at', time(), false);
+        delete_option('wlc_invoice_reconciliation_finished_at');
+        update_option(
+            'wlc_invoice_reconciliation_stats',
+            array(
+                'checked' => 0,
+                'matched' => 0,
+                'not_found' => 0,
+                'skipped_existing' => 0,
+                'skipped_newer' => 0,
+                'skipped_manual' => 0,
+                'skipped_update' => 0,
+                'errors' => 0,
+            ),
+            false
+        );
+
+        $scheduled = $this->schedule_page(1, true);
+        update_option('wlc_invoice_reconciliation_status', $scheduled ? 'scheduled' : 'schedule_error', false);
+        return $scheduled;
+    }
+
+    public function handle_manual_restart() {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_die(esc_html__('Keine Berechtigung.', 'patsch9-accounting-bridge'), '', array('response' => 403));
+        }
+
+        check_admin_referer('wlc_restart_invoice_reconciliation');
+
+        $result = $this->restart_scan();
+        $notice = $result ? 'started' : 'error';
+        wp_safe_redirect(
+            add_query_arg(
+                array(
+                    'page' => 'wlc-settings',
+                    'tab' => 'logs',
+                    'wlc_reconciliation_notice' => $notice,
+                ),
+                admin_url('admin.php')
+            )
+        );
+        exit;
     }
 
     /**
@@ -108,12 +199,15 @@ class WLC_Invoice_Reconciler {
         $page = max(1, absint($page));
         $api_client = new WLC_API_Client();
         if (!$api_client->is_configured()) {
+            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
             return;
         }
 
         if (!$this->acquire_batch_lock()) {
             return;
         }
+
+        update_option('wlc_invoice_reconciliation_status', 'running', false);
 
         try {
             $cutoff = absint(get_option('wlc_invoice_reconciliation_cutoff', 0));
@@ -133,6 +227,7 @@ class WLC_Invoice_Reconciler {
 
             if (!is_object($query) || !isset($query->orders, $query->max_num_pages)) {
                 $this->record_global_error('invalid_order_query', __('Der historische Rechnungsabgleich konnte die WooCommerce-Bestellungen nicht paginiert laden.', 'patsch9-accounting-bridge'));
+                update_option('wlc_invoice_reconciliation_status', 'error', false);
                 return;
             }
 
@@ -153,6 +248,7 @@ class WLC_Invoice_Reconciler {
                 'skipped_update' => 0,
                 'errors' => 0,
             ));
+            $force_recheck = 'yes' === get_option('wlc_invoice_reconciliation_force_recheck', 'no');
 
             foreach ($query->orders as $order) {
                 if (!$order instanceof WC_Order) {
@@ -180,7 +276,7 @@ class WLC_Invoice_Reconciler {
                     continue;
                 }
 
-                if (self::VERSION === (string) $order->get_meta('_wlc_lexware_reconciliation_checked')) {
+                if (!$force_recheck && self::VERSION === (string) $order->get_meta('_wlc_lexware_reconciliation_checked')) {
                     continue;
                 }
 
@@ -200,13 +296,22 @@ class WLC_Invoice_Reconciler {
             if ($page < $max_pages) {
                 $next_page = $page + 1;
                 update_option('wlc_invoice_reconciliation_page', $next_page, false);
-                $this->schedule_page($next_page);
+                $scheduled = $this->schedule_page($next_page);
+                if (!$scheduled) {
+                    $this->record_global_error('schedule_failed', __('Der nächste Batch des historischen Rechnungsabgleichs konnte nicht geplant werden.', 'patsch9-accounting-bridge'));
+                    update_option('wlc_invoice_reconciliation_status', 'schedule_error', false);
+                } else {
+                    update_option('wlc_invoice_reconciliation_status', 'scheduled', false);
+                }
                 return;
             }
 
             update_option('wlc_invoice_reconciliation_version', self::VERSION, false);
             update_option('wlc_invoice_reconciliation_page', 1, false);
             delete_option('wlc_invoice_reconciliation_max_pages');
+            delete_option('wlc_invoice_reconciliation_force_recheck');
+            update_option('wlc_invoice_reconciliation_finished_at', time(), false);
+            update_option('wlc_invoice_reconciliation_status', 'completed', false);
             update_option('wlc_invoice_reconciliation_notice_pending', 'yes', false);
         } finally {
             $this->release_batch_lock();
@@ -347,5 +452,84 @@ class WLC_Invoice_Reconciler {
                 absint($stats['errors'])
             ))
         );
+    }
+
+    /**
+     * Show reconciliation status and a nonce-protected manual restart control on
+     * the Accounting Bridge settings page.
+     */
+    public function render_status_controls() {
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if (!$screen || 'woocommerce_page_wlc-settings' !== $screen->id) {
+            return;
+        }
+
+        $stats = get_option('wlc_invoice_reconciliation_stats', array());
+        $stats = wp_parse_args(is_array($stats) ? $stats : array(), array(
+            'checked' => 0,
+            'matched' => 0,
+            'not_found' => 0,
+            'skipped_existing' => 0,
+            'errors' => 0,
+        ));
+        $status = sanitize_key((string) get_option('wlc_invoice_reconciliation_status', 'idle'));
+        $page = max(1, absint(get_option('wlc_invoice_reconciliation_page', 1)));
+        $max_pages = absint(get_option('wlc_invoice_reconciliation_max_pages', 0));
+        $notice = isset($_GET['wlc_reconciliation_notice']) ? sanitize_key(wp_unslash($_GET['wlc_reconciliation_notice'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only status after nonce-protected redirect.
+        $last_error = get_option('wlc_invoice_reconciliation_last_error', array());
+        $last_error_message = is_array($last_error) && !empty($last_error['message']) ? sanitize_text_field((string) $last_error['message']) : '';
+
+        $labels = array(
+            'idle' => __('Noch nicht gestartet', 'patsch9-accounting-bridge'),
+            'scheduled' => __('Geplant / wartet auf Hintergrundverarbeitung', 'patsch9-accounting-bridge'),
+            'running' => __('Läuft', 'patsch9-accounting-bridge'),
+            'completed' => __('Abgeschlossen', 'patsch9-accounting-bridge'),
+            'api_missing' => __('API-Key fehlt oder ist ungültig', 'patsch9-accounting-bridge'),
+            'schedule_error' => __('Scheduler konnte nicht gestartet werden', 'patsch9-accounting-bridge'),
+            'error' => __('Fehler', 'patsch9-accounting-bridge'),
+        );
+        $status_label = isset($labels[$status]) ? $labels[$status] : $status;
+
+        echo '<div class="notice notice-info" style="padding-bottom:12px;">';
+        echo '<p><strong>' . esc_html__('Historischer Lexware-Rechnungsabgleich', 'patsch9-accounting-bridge') . '</strong></p>';
+
+        if ('started' === $notice) {
+            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich wurde neu gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';
+        } elseif ('error' === $notice) {
+            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich konnte nicht gestartet werden. Bitte API-Konfiguration und Fehlerstatus prüfen.', 'patsch9-accounting-bridge') . '</strong></p>';
+        }
+
+        echo '<p>' . esc_html(sprintf(
+            /* translators: 1: status label, 2: current page, 3: total pages or question mark. */
+            __('Status: %1$s · Batch %2$d/%3$s', 'patsch9-accounting-bridge'),
+            $status_label,
+            $page,
+            $max_pages ? (string) $max_pages : '?'
+        )) . '</p>';
+        echo '<p>' . esc_html(sprintf(
+            /* translators: 1: checked orders, 2: matched invoices, 3: no matches, 4: errors, 5: already linked orders. */
+            __('Geprüft: %1$d · Zugeordnet: %2$d · Ohne Treffer: %3$d · Prüfbedarf/Fehler: %4$d · Bereits verknüpft: %5$d', 'patsch9-accounting-bridge'),
+            absint($stats['checked']),
+            absint($stats['matched']),
+            absint($stats['not_found']),
+            absint($stats['errors']),
+            absint($stats['skipped_existing'])
+        )) . '</p>';
+
+        if ($last_error_message) {
+            echo '<p><strong>' . esc_html__('Letzter Fehler:', 'patsch9-accounting-bridge') . '</strong> ' . esc_html($last_error_message) . '</p>';
+        }
+
+        echo '<p>' . esc_html__('Ein manueller Neustart prüft alle aktuell vorhandenen, noch nicht verknüpften Bestellungen erneut. Bereits gespeicherte Lexware-Rechnungsverknüpfungen werden nicht verändert.', 'patsch9-accounting-bridge') . '</p>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        echo '<input type="hidden" name="action" value="wlc_restart_invoice_reconciliation">';
+        wp_nonce_field('wlc_restart_invoice_reconciliation');
+        submit_button(__('Historischen Rechnungsabgleich starten / neu starten', 'patsch9-accounting-bridge'), 'secondary', 'submit', false);
+        echo '</form>';
+        echo '</div>';
     }
 }
