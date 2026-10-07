@@ -99,19 +99,46 @@ class WLC_Invoice_Reconciler {
     }
 
     /**
+     * Check whether a non-stale reconciliation worker currently owns the lock.
+     *
+     * @return bool
+     */
+    private function is_batch_lock_active() {
+        $locked_at = absint(get_option(self::LOCK_OPTION, 0));
+        if (!$locked_at) {
+            return false;
+        }
+
+        if ((time() - $locked_at) >= self::LOCK_TTL) {
+            delete_option(self::LOCK_OPTION);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Start a completely new historical scan without touching existing links.
      *
      * Already linked orders remain untouched. Orders previously checked without
      * a match are rechecked because Lexware may have gained invoices since the
      * original scan.
      *
-     * @return int|bool Action ID / scheduling result.
+     * @return int|bool|WP_Error Action ID / scheduling result or busy state.
      */
     public function restart_scan() {
         $api_client = new WLC_API_Client();
         if (!$api_client->is_configured()) {
             update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
             return false;
+        }
+
+        if ($this->is_batch_lock_active()) {
+            update_option('wlc_invoice_reconciliation_status', 'running', false);
+            return new WP_Error(
+                'reconciliation_busy',
+                __('Der historische Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen verhindert.', 'patsch9-accounting-bridge')
+            );
         }
 
         $this->cleanup_scheduler();
@@ -153,7 +180,11 @@ class WLC_Invoice_Reconciler {
         check_admin_referer('wlc_restart_invoice_reconciliation');
 
         $result = $this->restart_scan();
-        $notice = $result ? 'started' : 'error';
+        if (is_wp_error($result)) {
+            $notice = 'reconciliation_busy' === $result->get_error_code() ? 'busy' : 'error';
+        } else {
+            $notice = $result ? 'started' : 'error';
+        }
         wp_safe_redirect(
             add_query_arg(
                 array(
@@ -499,6 +530,8 @@ class WLC_Invoice_Reconciler {
 
         if ('started' === $notice) {
             echo '<p><strong>' . esc_html__('Der Rechnungsabgleich wurde neu gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';
+        } elseif ('busy' === $notice) {
+            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen nicht gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';
         } elseif ('error' === $notice) {
             echo '<p><strong>' . esc_html__('Der Rechnungsabgleich konnte nicht gestartet werden. Bitte API-Konfiguration und Fehlerstatus prüfen.', 'patsch9-accounting-bridge') . '</strong></p>';
         }
