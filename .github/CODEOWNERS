@@ -1,0 +1,10 @@
+# Default owner for all repository content.
+* @patsch9
+
+# Security- and release-sensitive repository configuration.
+/.github/ @patsch9
+/.distignore @patsch9
+/SECURITY.md @patsch9
+/VERSIONING.md @patsch9
+/patsch9-accounting-bridge.php @patsch9
+/uninstall.php @patsch9
