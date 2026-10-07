@@ -157,10 +157,11 @@ jobs:
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: .release-build/patsch9-accounting-bridge
+          strict: true
 
       - name: Store release assets
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-assets
           path: |
@@ -177,7 +178,7 @@ jobs:
       contents: write
     steps:
       - name: Download verified release assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: release-assets
 
