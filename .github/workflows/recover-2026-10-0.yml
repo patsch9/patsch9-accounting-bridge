@@ -1,0 +1,57 @@
+name: Recover 2026.10.0 release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/recover-2026-10-0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          ref: v2026.10.0
+          fetch-depth: 0
+
+      - name: Download previously verified release assets
+        uses: actions/download-artifact@v8
+        with:
+          name: release-assets
+          repository: ${{ github.repository }}
+          run-id: 37594740693
+          github-token: ${{ github.token }}
+
+      - name: Verify and publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: v2026.10.0
+          VERSION: 2026.10.0
+          SLUG: patsch9-accounting-bridge
+          RELEASE_TITLE: Patsch9 Accounting Bridge for WooCommerce
+        run: |
+          set -euo pipefail
+          test -f "${SLUG}-${VERSION}.zip"
+          test -f "${SLUG}-${VERSION}.zip.sha256"
+          sha256sum -c "${SLUG}-${VERSION}.zip.sha256"
+
+          if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; nothing to do."
+            exit 0
+          fi
+
+          gh release create "$TAG" \
+            "${SLUG}-${VERSION}.zip" \
+            "${SLUG}-${VERSION}.zip.sha256" \
+            --repo "$GH_REPO" \
+            --verify-tag \
+            --title "${RELEASE_TITLE} ${VERSION}" \
+            --generate-notes
