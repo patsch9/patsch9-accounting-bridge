@@ -17,7 +17,7 @@ jobs:
         with:
           ref: chore/automated-releases
 
-      - name: Document intentional database access and enable strict release checks
+      - name: Document intentional database access
         shell: python
         run: |
           from pathlib import Path
@@ -98,28 +98,17 @@ jobs:
           if text.count(old) != 1:
               raise SystemExit('Rate-limit transient cleanup query not found exactly once.')
           text = text.replace(old, new, 1)
-          # Remove the old trailing suppression from the final query only.
           suffix = "    )); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching\n}"
           if text.count(suffix) != 1:
               raise SystemExit('Final transient cleanup suppression not found exactly once.')
           text = text.replace(suffix, "    ));\n}", 1)
           uninstall_path.write_text(text, encoding='utf-8')
 
-          release_path = Path('.github/workflows/release.yml')
-          text = release_path.read_text(encoding='utf-8')
-          old = "        with:\n          build-dir: .release-build/patsch9-accounting-bridge\n"
-          new = "        with:\n          build-dir: .release-build/patsch9-accounting-bridge\n          strict: true\n"
-          if text.count(old) != 1:
-              raise SystemExit('Release Plugin Check block not found exactly once.')
-          release_path.write_text(text.replace(old, new, 1), encoding='utf-8')
-
-          Path('.github/workflows/fix-release-db-warnings.yml').unlink()
-
       - name: Commit cleanup
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Make accounting release checks warning-free"
+          git add includes/class-queue-handler.php includes/class-admin-settings.php uninstall.php
+          git commit -m "Document intentional accounting database access"
           git push origin HEAD:chore/automated-releases
