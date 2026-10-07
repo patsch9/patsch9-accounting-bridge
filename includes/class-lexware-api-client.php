@@ -1090,6 +1090,181 @@ class WLC_API_Client {
         
         return strtr($text, $replace);
     }
+    /**
+ * Returns whether a usable Lexware API key is configured.
+ *
+ * @return bool
+ */
+public function is_configured() {
+    return '' !== $this->api_key;
+}
+
+/**
+ * Normalize Lexware formatted text for deterministic matching.
+ *
+ * @param string $text Source text.
+ * @return string
+ */
+private function normalize_reconciliation_text($text) {
+    $text = html_entity_decode(wp_strip_all_tags((string) $text), ENT_QUOTES | ENT_HTML5, get_bloginfo('charset') ?: 'UTF-8');
+    $text = preg_replace('/\s+/u', ' ', $text);
+    return is_string($text) ? trim($text) : '';
+}
+
+/**
+ * Check whether the complete WooCommerce order number occurs in the
+ * invoice introduction. Unicode letter/number boundaries prevent order
+ * 123 from matching 1123 or 1234.
+ *
+ * @param string $introduction Lexware invoice introduction.
+ * @param string $order_number WooCommerce order number.
+ * @return bool
+ */
+private function introduction_contains_order_number($introduction, $order_number) {
+    $introduction = $this->normalize_reconciliation_text($introduction);
+    $order_number = $this->normalize_reconciliation_text((string) $order_number);
+    if ('' === $introduction || '' === $order_number || strlen($order_number) > 191) {
+        return false;
+    }
+
+    $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($order_number, '/') . '(?![\p{L}\p{N}])/u';
+    return 1 === preg_match($pattern, $introduction);
+}
+
+/**
+ * Find an already existing Lexware invoice for a WooCommerce order.
+ *
+ * The lookup is intentionally read-only and fail-closed. Voucherlist is
+ * used for paging and amount preselection; full invoice details are then
+ * retrieved because Lexware does not expose the introduction as a
+ * voucherlist filter.
+ *
+ * @param WC_Order $order WooCommerce order.
+ * @param int      $cutoff_timestamp Upper date boundary for historical reconciliation.
+ * @return array|null|WP_Error Full invoice data, null for a confirmed non-match, or error.
+ */
+public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
+    if (!$order instanceof WC_Order) {
+        return new WP_Error('invalid_order', __('Ungültige Bestellung für die Lexware-Rechnungssuche.', 'patsch9-accounting-bridge'), array('retryable' => false));
+    }
+    if (!$this->is_configured()) {
+        return new WP_Error('no_api_key', __('Kein gültiger API-Key konfiguriert', 'patsch9-accounting-bridge'), array('retryable' => false));
+    }
+
+    $created = $order->get_date_created();
+    $order_number = trim((string) $order->get_order_number());
+    if (!$created || '' === $order_number) {
+        return new WP_Error('missing_order_reference', __('Die Bestellung besitzt keine auswertbare Bestellnummer oder kein Erstellungsdatum.', 'patsch9-accounting-bridge'), array('retryable' => false));
+    }
+
+    $order_total = round((float) $order->get_total(), 2);
+    $before_days = max(0, min(31, absint(apply_filters('wlc_reconciliation_days_before_order', 7, $order))));
+    $after_days = max(1, min(730, absint(apply_filters('wlc_reconciliation_days_after_order', 180, $order))));
+    $from_ts = $created->getTimestamp() - ($before_days * DAY_IN_SECONDS);
+    $to_ts = $created->getTimestamp() + ($after_days * DAY_IN_SECONDS);
+    if ($cutoff_timestamp > 0) {
+        $to_ts = min($to_ts, absint($cutoff_timestamp));
+    }
+    if ($to_ts < $from_ts) {
+        $to_ts = $from_ts;
+    }
+
+    $from = wp_date('Y-m-d', $from_ts, wp_timezone());
+    $to = wp_date('Y-m-d', $to_ts, wp_timezone());
+    $matches = array();
+    $page = 0;
+    $max_pages = 20;
+
+    do {
+        $query = http_build_query(array(
+            'voucherType' => 'invoice',
+            'voucherStatus' => 'any',
+            'voucherDateFrom' => $from,
+            'voucherDateTo' => $to,
+            'size' => 250,
+            'page' => $page,
+            'sort' => 'voucherDate,ASC',
+        ), '', '&', PHP_QUERY_RFC3986);
+        $list = $this->request('GET', 'voucherlist?' . $query);
+        if (is_wp_error($list)) {
+            return $list;
+        }
+        if (!isset($list['content']) || !is_array($list['content'])) {
+            return new WP_Error('invalid_voucherlist_response', __('Lexware hat bei der historischen Rechnungssuche keine gültige Belegliste geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+        }
+
+        foreach ($list['content'] as $candidate) {
+            if (!is_array($candidate) || 'invoice' !== strtolower((string) ($candidate['voucherType'] ?? ''))) {
+                continue;
+            }
+            if (!isset($candidate['totalAmount']) || abs(round((float) $candidate['totalAmount'], 2) - $order_total) > 0.02) {
+                continue;
+            }
+
+            $invoice_id = sanitize_text_field((string) ($candidate['id'] ?? ''));
+            if (!$this->is_valid_uuid($invoice_id)) {
+                return new WP_Error('invalid_invoice_search_id', __('Lexware hat bei der historischen Rechnungssuche eine ungültige Rechnungs-ID geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+            }
+
+            $details = $this->request('GET', 'invoices/' . rawurlencode($invoice_id));
+            if (is_wp_error($details)) {
+                return $details;
+            }
+            if (!isset($details['totalPrice']['totalGrossAmount'])) {
+                return new WP_Error('invalid_invoice_search_response', __('Lexware hat bei der historischen Rechnungssuche unvollständige Rechnungsdaten geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+            }
+            if (abs(round((float) $details['totalPrice']['totalGrossAmount'], 2) - $order_total) > 0.02) {
+                continue;
+            }
+            if (!$this->introduction_contains_order_number((string) ($details['introduction'] ?? ''), $order_number)) {
+                continue;
+            }
+
+            $details_id = sanitize_text_field((string) ($details['id'] ?? ''));
+            if (!$this->is_valid_uuid($details_id) || $details_id !== $invoice_id) {
+                return new WP_Error('invoice_identity_mismatch', __('Lexware hat widersprüchliche Rechnungsdaten geliefert. Die Bestellung wurde nicht automatisch verknüpft.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+            }
+            $matches[$invoice_id] = $details;
+        }
+
+        $total_pages = isset($list['totalPages']) ? absint($list['totalPages']) : 1;
+        if ($total_pages > $max_pages) {
+            return new WP_Error('invoice_search_too_broad', __('Der Lexware-Suchzeitraum enthält zu viele Rechnungen für einen sicheren automatischen Abgleich. Bitte die Bestellung manuell prüfen oder den Suchzeitraum per Filter einschränken.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+        }
+        $page++;
+    } while ($page < $total_pages);
+
+    if (!$matches) {
+        return null;
+    }
+
+    $usable = array();
+    $voided = array();
+    foreach ($matches as $invoice_id => $invoice) {
+        $status = strtolower((string) ($invoice['voucherStatus'] ?? ''));
+        if ('draft' === $status) {
+            return new WP_Error('draft_invoice_match', __('Zu dieser Bestellung wurde in Lexware ein passender Rechnungsentwurf gefunden. Aus Schutz vor Doppelbelegen ist eine manuelle Prüfung erforderlich.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+        }
+        if ('voided' === $status) {
+            $voided[$invoice_id] = $invoice;
+        } else {
+            $usable[$invoice_id] = $invoice;
+        }
+    }
+
+    if (1 === count($usable) && count($matches) === (1 + count($voided))) {
+        return reset($usable);
+    }
+    if (0 === count($usable) && 1 === count($voided)) {
+        return reset($voided);
+    }
+    if (1 === count($matches)) {
+        return reset($matches);
+    }
+
+    return new WP_Error('ambiguous_invoice_match', __('In Lexware wurden mehrere Rechnungen gefunden, die Bestellnummer und Gesamtbetrag dieser Bestellung enthalten. Es wurde keine automatische Zuordnung vorgenommen.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+}
+
     private function request($method, $endpoint, $data = null, $raw_response = false, $accept = null) {
         if (empty($this->api_key)) {
             return new WP_Error('no_api_key', __('Kein gültiger API-Key konfiguriert', 'patsch9-accounting-bridge'));

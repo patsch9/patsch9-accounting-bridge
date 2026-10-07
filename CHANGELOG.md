@@ -6,6 +6,15 @@ Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONI
 
 Keine Änderungen.
 
+## 2026.10.1 – Noch nicht veröffentlicht
+
+- Historischer, rein lesender Abgleich bestehender WooCommerce-Bestellungen mit bereits vorhandenen Lexware-Rechnungen.
+- Eindeutige Zuordnung nur bei exakter Bestellnummer im Lexware-Einleitungstext und identischem Bruttobetrag.
+- Hintergrundverarbeitung in kleinen Batches unter Beachtung des Lexware-API-Limits.
+- Fail-closed-Verhalten bei API-Fehlern, Rechnungsentwürfen oder mehrdeutigen Treffern zum Schutz vor Doppelbelegen.
+- Zusätzlicher Abgleich unmittelbar vor einer Rechnungserstellung für historische Bestellungen.
+- Bewusst gelöschte Rechnungsverknüpfungen werden nicht automatisch erneut hergestellt.
+
 ## 2026.10.0 – 2026-10-06
 
 Erstes stabiles öffentliches Release.

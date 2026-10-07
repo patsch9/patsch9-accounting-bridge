@@ -173,6 +173,7 @@ class WLC_WooCommerce_Integration {
         $lexware_credit_note_id = $order->get_meta('_wlc_lexware_credit_note_id');
         $invoice_voided = $order->get_meta('_wlc_lexware_invoice_voided');
         $manual_entry = $order->get_meta('_wlc_manual_invoice_entry');
+        $reconciled_entry = $order->get_meta('_wlc_lexware_invoice_reconciled');
         
         wp_nonce_field('wlc_save_manual_invoice_' . $order_id, 'wlc_manual_invoice_nonce');
         ?>
@@ -182,6 +183,8 @@ class WLC_WooCommerce_Integration {
                 <p><strong><?php esc_html_e('Lexware ID:', 'patsch9-accounting-bridge'); ?></strong><br><code><?php echo esc_html($lexware_invoice_id); ?></code></p>
                 <?php if ($manual_entry === 'yes'): ?>
                     <p><em style="font-size: 11px; color: #666;"><?php esc_html_e('(Manuell hinterlegt)', 'patsch9-accounting-bridge'); ?></em></p>
+                <?php elseif ($reconciled_entry === 'yes'): ?>
+                    <p><em style="font-size: 11px; color: #666;"><?php esc_html_e('(Automatisch aus Lexware ermittelt)', 'patsch9-accounting-bridge'); ?></em></p>
                 <?php endif; ?>
                 <p><strong><?php esc_html_e('Status:', 'patsch9-accounting-bridge'); ?></strong><br><?php 
                 if ($invoice_voided === 'yes') { 
@@ -642,9 +645,12 @@ function wlc_ajax_unlink_invoice() {
     $order->delete_meta_data('_wlc_manual_invoice_entry');
     $order->delete_meta_data('_wlc_lexware_credit_note_for_invoice_id');
     $order->delete_meta_data('_wlc_lexware_update_source_invoice_id');
+    $order->delete_meta_data('_wlc_lexware_invoice_reconciled');
+    $order->update_meta_data('_wlc_skip_auto_reconciliation', 'yes');
+    $order->update_meta_data('_wlc_lexware_reconciliation_state', 'manually_unlinked');
     $order->save();
     
-    $order->add_order_note(esc_html__('Verknüpfung zur Lexware-Rechnung wurde entfernt.', 'patsch9-accounting-bridge'));
+    $order->add_order_note(esc_html__('Verknüpfung zur Lexware-Rechnung wurde entfernt. Die automatische historische Wiederzuordnung ist für diese Bestellung deaktiviert.', 'patsch9-accounting-bridge'));
     
     wp_send_json_success(array('message' => esc_html__('Verknüpfung wurde gelöscht', 'patsch9-accounting-bridge')));
 }

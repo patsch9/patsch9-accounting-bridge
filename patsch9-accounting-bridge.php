@@ -3,7 +3,7 @@
  * Plugin Name: Patsch9 Accounting Bridge for WooCommerce
  * Plugin URI: https://github.com/patsch9/patsch9-accounting-bridge
  * Description: Automatische Rechnungserstellung in Lexware Office aus WooCommerce-Bestellungen mit vollständiger Synchronisation und Kundenbereichs-Integration
- * Version: 2026.10.0
+ * Version: 2026.10.1
  * Author: Patrick Schmidt
  * Author URI: https://github.com/patsch9
  * License: GPLv2 or later
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin-Konstanten definieren
-define('WLC_VERSION', '2026.10.0');
+define('WLC_VERSION', '2026.10.1');
 define('WLC_DB_VERSION', '1.3.6');
 define('WLC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WLC_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -127,6 +127,7 @@ class WLC_Connector {
  */
 private function load_dependencies() {
     require_once WLC_PLUGIN_DIR . 'includes/class-lexware-api-client.php';
+    require_once WLC_PLUGIN_DIR . 'includes/class-invoice-reconciler.php';
     require_once WLC_PLUGIN_DIR . 'includes/class-woo-lexware-integration.php';
     require_once WLC_PLUGIN_DIR . 'includes/class-admin-settings.php';
     require_once WLC_PLUGIN_DIR . 'includes/class-customer-area.php';
@@ -154,6 +155,9 @@ public function register_invoice_email($email_classes) {
         if (is_admin()) {
             WLC_Admin_Settings::get_instance();
         }
+
+        // Historische Rechnungen im Hintergrund read-only zuordnen.
+        WLC_Invoice_Reconciler::get_instance();
 
         // WooCommerce-Integration
         WLC_WooCommerce_Integration::get_instance();
@@ -191,6 +195,12 @@ public function register_invoice_email($email_classes) {
 
         // Setze Standard-Einstellungen
         $this->set_default_options();
+
+        // Orders existing before this feature becomes active form the immutable
+        // historical reconciliation set. New orders are handled normally.
+        if (!get_option('wlc_invoice_reconciliation_cutoff', 0)) {
+            add_option('wlc_invoice_reconciliation_cutoff', time(), '', false);
+        }
 
     }
 
