@@ -14,7 +14,7 @@ class WLC_Invoice_Reconciler {
     const VERSION = '1';
     const GROUP = 'wlc-reconciliation';
     const HOOK = 'wlc_reconcile_existing_invoices';
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = 10;
 
     private static $instance = null;
 

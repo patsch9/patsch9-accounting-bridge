@@ -1122,7 +1122,7 @@ private function normalize_reconciliation_text($text) {
  */
 private function introduction_contains_order_number($introduction, $order_number) {
     $introduction = $this->normalize_reconciliation_text($introduction);
-    $order_number = trim((string) $order_number);
+    $order_number = $this->normalize_reconciliation_text((string) $order_number);
     if ('' === $introduction || '' === $order_number || strlen($order_number) > 191) {
         return false;
     }
