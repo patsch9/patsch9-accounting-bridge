@@ -6,6 +6,13 @@ Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONI
 
 Keine Änderungen.
 
+## 2026.10.2 – Noch nicht veröffentlicht
+
+- Manueller Start und Neustart des historischen Lexware-Rechnungsabgleichs in der Accounting-Bridge-Administration.
+- Sichtbarer Status mit Batch-Fortschritt, Treffern, Nicht-Treffern und Fehlern.
+- Manuelle Neustarts prüfen auch bereits ohne Treffer geprüfte Bestellungen erneut, verändern aber keine bestehenden Rechnungsverknüpfungen.
+- Action-Scheduler-Aufräumung berücksichtigt die eigene Scheduler-Gruppe korrekt.
+
 ## 2026.10.1 – Noch nicht veröffentlicht
 
 - Historischer, rein lesender Abgleich bestehender WooCommerce-Bestellungen mit bereits vorhandenen Lexware-Rechnungen.
