@@ -114,6 +114,7 @@ class WLC_Invoice_Reconciler {
             'skipped_existing' => 0,
             'skipped_newer' => 0,
             'skipped_manual' => 0,
+            'skipped_update' => 0,
             'errors' => 0,
         ));
 
@@ -129,6 +130,11 @@ class WLC_Invoice_Reconciler {
 
             if ('yes' === $order->get_meta('_wlc_skip_auto_reconciliation')) {
                 $stats['skipped_manual']++;
+                continue;
+            }
+
+            if ($order->get_meta('_wlc_lexware_update_source_invoice_id')) {
+                $stats['skipped_update']++;
                 continue;
             }
 
@@ -214,6 +220,10 @@ class WLC_Invoice_Reconciler {
         }
 
         if ('yes' === $order->get_meta('_wlc_skip_auto_reconciliation')) {
+            return null;
+        }
+
+        if ($order->get_meta('_wlc_lexware_update_source_invoice_id')) {
             return null;
         }
 
