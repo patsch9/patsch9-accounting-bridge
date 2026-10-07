@@ -33,6 +33,20 @@ Für ein stabiles Release müssen diese Angaben übereinstimmen:
 5. Git-Tag `vYYYY.M.PATCH`.
 6. Versionsnummer im ZIP-Dateinamen.
 
+## Automatisierte GitHub-Releases
+
+GitHub Releases werden durch `.github/workflows/release.yml` automatisch aus Git-Tags erzeugt.
+
+1. Release-fertigen Code zuerst nach `main` mergen.
+2. Einen Tag wie `v2026.10.0` auf den gewünschten `main`-Commit setzen und pushen.
+3. Der Workflow prüft, dass der Tag auf `main` liegt und mit Plugin-Header sowie Versionskonstante übereinstimmt.
+4. Bei stabilen Releases werden zusätzlich `Stable tag` und der Changelog-Eintrag geprüft.
+5. Aus `.distignore` wird ein bereinigtes WordPress-Paket gebaut.
+6. PHP-/JavaScript-Syntax und WordPress Plugin Check laufen auf dem tatsächlichen Paketinhalt.
+7. Erst nach erfolgreichen Prüfungen werden ZIP und SHA-256-Prüfsumme als GitHub Release veröffentlicht.
+
+Tags mit `-alpha.N`, `-beta.N` oder `-rc.N` werden automatisch als GitHub-Pre-Release markiert. Bei Vorabversionen bleibt der WordPress.org-`Stable tag` auf der letzten stabilen Version.
+
 ## Interne Schema-Versionen
 
 Datenbank- oder Speicherschema-Versionen sind ausdrücklich von der öffentlichen Plugin-Version getrennt. Sie werden nur erhöht, wenn sich das persistierte Schema tatsächlich ändert. Eine reine Code-, Dokumentations- oder Sicherheitskorrektur erhöht daher nicht automatisch die interne Datenbankversion.

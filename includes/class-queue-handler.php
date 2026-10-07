@@ -80,6 +80,7 @@ class WLC_Queue_Handler {
         $table = $wpdb->prefix . 'wlc_queue';
 
         // Compatibility guard for active rows created before dedupe_key existed.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $active = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM %i WHERE order_id = %d AND action = %s AND status IN ('pending','processing','manual_check') LIMIT 1",
             $table,
@@ -90,6 +91,7 @@ class WLC_Queue_Handler {
             return absint($active);
         }
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $inserted = $wpdb->insert(
             $table,
             array(
@@ -119,6 +121,7 @@ class WLC_Queue_Handler {
         // replaying the item could create a duplicate voucher. Therefore stale
         // processing items fail closed and require a manual Lexware check.
         $message = esc_html__('Verarbeitung wurde unerwartet unterbrochen. Aus Schutz vor Doppelbelegen wird dieser Schreibvorgang nicht automatisch wiederholt. Bitte zuerst in Lexware prüfen und den Beleg bei Bedarf manuell verknüpfen.', 'patsch9-accounting-bridge');
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $wpdb->query($wpdb->prepare(
             "UPDATE %i SET status='manual_check', error_message=%s, locked_at=NULL, next_attempt_at=NULL, updated_at=%s WHERE status='processing' AND locked_at IS NOT NULL AND locked_at < %s",
             $table,
@@ -136,6 +139,7 @@ class WLC_Queue_Handler {
         $now = current_time('mysql');
 
         // Several candidates are tried because another worker may claim one between SELECT and UPDATE.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $ids = $wpdb->get_col($wpdb->prepare(
             "SELECT id FROM %i WHERE status='pending' AND attempts < %d AND (next_attempt_at IS NULL OR next_attempt_at <= %s) ORDER BY created_at ASC, id ASC LIMIT 10",
             $table,
@@ -143,6 +147,7 @@ class WLC_Queue_Handler {
             $now
         ));
         foreach ($ids as $id) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
             $updated = $wpdb->query($wpdb->prepare(
                 "UPDATE %i SET status='processing', locked_at=%s, attempts=attempts+1, updated_at=%s WHERE id=%d AND status='pending' AND attempts < %d AND (next_attempt_at IS NULL OR next_attempt_at <= %s)",
                 $table,
@@ -153,6 +158,7 @@ class WLC_Queue_Handler {
                 $now
             ));
             if (1 === (int) $updated) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
                 return $wpdb->get_row($wpdb->prepare("SELECT * FROM %i WHERE id=%d", $table, absint($id)));
             }
         }
@@ -170,6 +176,7 @@ class WLC_Queue_Handler {
         $table = $wpdb->prefix . 'wlc_queue';
         $max_attempts = max(1, min(10, absint(get_option('wlc_retry_attempts', 3))));
         $now = current_time('mysql');
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $id = $wpdb->get_var($wpdb->prepare(
             "SELECT id FROM %i WHERE order_id=%d AND action=%s AND status='pending' AND attempts < %d AND (next_attempt_at IS NULL OR next_attempt_at <= %s) ORDER BY id ASC LIMIT 1",
             $table,
@@ -179,6 +186,7 @@ class WLC_Queue_Handler {
             $now
         ));
         if (!$id) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
             $manual_check = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM %i WHERE order_id=%d AND action=%s AND status='manual_check' LIMIT 1",
                 $table,
@@ -188,6 +196,7 @@ class WLC_Queue_Handler {
             if ($manual_check) {
                 return new WP_Error('queue_manual_check', esc_html__('Dieser Lexware-Schreibvorgang ist nach einem unklaren Übertragungszustand gesperrt. Bitte zuerst in Lexware prüfen und die Sperre unter WooCommerce > Accounting Bridge > Logs & Queue ausdrücklich freigeben.', 'patsch9-accounting-bridge'));
             }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
             $processing = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM %i WHERE order_id=%d AND action=%s AND status='processing' LIMIT 1",
                 $table,
@@ -199,6 +208,7 @@ class WLC_Queue_Handler {
             }
             return new WP_Error('queue_not_due', esc_html__('Für diese Bestellung ist aktuell kein fälliges Queue-Item vorhanden.', 'patsch9-accounting-bridge'));
         }
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $updated = $wpdb->query($wpdb->prepare(
             "UPDATE %i SET status='processing', locked_at=%s, attempts=attempts+1, updated_at=%s WHERE id=%d AND status='pending' AND attempts < %d AND (next_attempt_at IS NULL OR next_attempt_at <= %s)",
             $table,
@@ -211,6 +221,7 @@ class WLC_Queue_Handler {
         if (1 !== (int)$updated) {
             return new WP_Error('queue_race', esc_html__('Die Lexware-Aktion wurde parallel von einem anderen Prozess übernommen.', 'patsch9-accounting-bridge'));
         }
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         return $wpdb->get_row($wpdb->prepare("SELECT * FROM %i WHERE id=%d", $table, absint($id)));
     }
 
@@ -402,6 +413,7 @@ class WLC_Queue_Handler {
 
     private function mark_as_completed($item_id, $result_id) {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $wpdb->update(
             $wpdb->prefix . 'wlc_queue',
             array(
@@ -437,6 +449,7 @@ class WLC_Queue_Handler {
             $delay = min(HOUR_IN_SECONDS, 30 * (2 ** max(0, $attempts - 1)));
             $next = wp_date('Y-m-d H:i:s', time() + $delay, wp_timezone());
         }
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $wpdb->update(
             $table,
             array(
@@ -460,6 +473,7 @@ class WLC_Queue_Handler {
             return false;
         }
         $table = $wpdb->prefix . 'wlc_queue';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $updated = $wpdb->update(
             $table,
             array(
@@ -479,6 +493,7 @@ class WLC_Queue_Handler {
     public static function get_queue_status() {
         global $wpdb;
         $table = $wpdb->prefix . 'wlc_queue';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         return $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT * FROM %i WHERE status IN ('pending','processing','failed','manual_check') ORDER BY created_at DESC LIMIT 50",

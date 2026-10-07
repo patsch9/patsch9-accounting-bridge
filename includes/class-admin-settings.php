@@ -621,6 +621,7 @@ class WLC_Admin_Settings {
 
         global $wpdb;
         $table_name = $wpdb->prefix . 'wlc_queue';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit nonce/capability-protected cleanup of the plugin-owned queue table must take effect immediately.
         $deleted = $wpdb->query(
             $wpdb->prepare(
                 "DELETE FROM %i WHERE status IN (%s, %s)",
@@ -628,7 +629,7 @@ class WLC_Admin_Settings {
                 'pending',
                 'failed'
             )
-        ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        );
 
         wp_safe_redirect(add_query_arg(
             array(
