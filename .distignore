@@ -1,0 +1,26 @@
+# Repository/development files excluded from the installable WordPress release ZIP.
+/.git/
+/.github/
+/.gitignore
+/.gitattributes
+/.distignore
+/README.md
+/CHANGELOG.md
+/DOCUMENTATION.md
+/MIGRATION.md
+/SECURITY.md
+/VERSIONING.md
+/phpcs.xml
+/phpcs.xml.dist
+/phpunit.xml
+/phpunit.xml.dist
+/composer.json
+/composer.lock
+/package.json
+/package-lock.json
+/node_modules/
+/tests/
+/build/
+/dist/
+/.release-build/
+*.zip

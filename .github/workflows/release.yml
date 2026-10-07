@@ -1,0 +1,205 @@
+name: Build and publish release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - '.distignore'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate release metadata
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            git fetch origin main:refs/remotes/origin/main --no-tags
+            TAG_COMMIT="$(git rev-list -n1 "$GITHUB_REF_NAME")"
+            if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
+              echo "::error::Release tags must point to a commit contained in main."
+              exit 1
+            fi
+          fi
+
+          python3 <<'PY'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          plugin_file = Path('patsch9-accounting-bridge.php')
+          plugin = plugin_file.read_text(encoding='utf-8')
+          readme = Path('readme.txt').read_text(encoding='utf-8')
+          changelog = Path('CHANGELOG.md').read_text(encoding='utf-8')
+
+          def required(pattern, text, label):
+              match = re.search(pattern, text, re.MULTILINE)
+              if not match:
+                  print(f'::error::Could not read {label}.')
+                  sys.exit(1)
+              return match.group(1).strip()
+
+          header_version = required(r'^\s*\*\s*Version:\s*([^\s]+)', plugin, 'plugin header version')
+          constant_version = required(r"define\(\s*'WLC_VERSION'\s*,\s*'([^']+)'\s*\)", plugin, 'WLC_VERSION')
+          stable_tag = required(r'^Stable tag:\s*([^\s]+)\s*$', readme, 'readme Stable tag')
+
+          version_pattern = re.compile(r'^\d{4}\.([1-9]|1[0-2])\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?$')
+          stable_pattern = re.compile(r'^\d{4}\.([1-9]|1[0-2])\.(0|[1-9]\d*)$')
+
+          if header_version != constant_version:
+              print(f'::error::Plugin header version ({header_version}) and WLC_VERSION ({constant_version}) differ.')
+              sys.exit(1)
+
+          event = os.environ['GITHUB_EVENT_NAME']
+          if event == 'push':
+              tag = os.environ['GITHUB_REF_NAME']
+              if not tag.startswith('v'):
+                  print('::error::Release tag must start with v.')
+                  sys.exit(1)
+              version = tag[1:]
+              if not version_pattern.fullmatch(version):
+                  print(f'::error::Tag {tag} does not match the project version scheme.')
+                  sys.exit(1)
+              if header_version != version:
+                  print(f'::error::Tag version ({version}) and plugin version ({header_version}) differ.')
+                  sys.exit(1)
+          else:
+              version = header_version
+              if not version_pattern.fullmatch(version):
+                  print(f'::error::Plugin version {version} does not match the project version scheme.')
+                  sys.exit(1)
+
+          prerelease = '-' in version
+          if prerelease:
+              if not stable_pattern.fullmatch(stable_tag):
+                  print(f'::error::Stable tag {stable_tag} must remain a stable numeric version during prereleases.')
+                  sys.exit(1)
+          else:
+              if stable_tag != version:
+                  print(f'::error::Stable tag ({stable_tag}) and stable plugin version ({version}) differ.')
+                  sys.exit(1)
+              if not re.search(rf'^##\s+{re.escape(version)}(?:\s|$)', changelog, re.MULTILINE):
+                  print(f'::error::CHANGELOG.md has no release entry for {version}.')
+                  sys.exit(1)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write(f'version={version}\n')
+              output.write(f'prerelease={str(prerelease).lower()}\n')
+          PY
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Build installable package
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SLUG: patsch9-accounting-bridge
+        run: |
+          set -euo pipefail
+          rm -rf .release-build
+          mkdir -p ".release-build/$SLUG"
+          rsync -a --delete --exclude-from=.distignore ./ ".release-build/$SLUG/"
+
+          test -f ".release-build/$SLUG/patsch9-accounting-bridge.php"
+          test -f ".release-build/$SLUG/readme.txt"
+          test -f ".release-build/$SLUG/LICENSE"
+
+          if find ".release-build/$SLUG" -type l -print -quit | grep -q .; then
+            echo "::error::Release packages must not contain symbolic links."
+            exit 1
+          fi
+
+          for forbidden in .git .github .distignore README.md CHANGELOG.md DOCUMENTATION.md MIGRATION.md SECURITY.md VERSIONING.md; do
+            if [[ -e ".release-build/$SLUG/$forbidden" ]]; then
+              echo "::error::Repository-only file leaked into release package: $forbidden"
+              exit 1
+            fi
+          done
+
+          find ".release-build/$SLUG" -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find ".release-build/$SLUG" -type f -name '*.js' -print0)
+
+          (
+            cd .release-build
+            zip -X -q -r "../${SLUG}-${VERSION}.zip" "$SLUG"
+          )
+          sha256sum "${SLUG}-${VERSION}.zip" > "${SLUG}-${VERSION}.zip.sha256"
+
+      - name: WordPress Plugin Check on release package
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: .release-build/patsch9-accounting-bridge
+
+      - name: Store release assets
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            patsch9-accounting-bridge-${{ steps.version.outputs.version }}.zip
+            patsch9-accounting-bridge-${{ steps.version.outputs.version }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+          SLUG: patsch9-accounting-bridge
+          RELEASE_TITLE: Patsch9 Accounting Bridge for WooCommerce
+        run: |
+          set -euo pipefail
+          args=(
+            release create "$GITHUB_REF_NAME"
+            "${SLUG}-${VERSION}.zip"
+            "${SLUG}-${VERSION}.zip.sha256"
+            --verify-tag
+            --title "${RELEASE_TITLE} ${VERSION}"
+            --generate-notes
+          )
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+          gh "${args[@]}"
