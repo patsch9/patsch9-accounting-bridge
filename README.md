@@ -1,6 +1,6 @@
 # Patsch9 Accounting Bridge for WooCommerce
 
-Entwicklungsstand: **2026.10.1**
+Entwicklungsstand: **2026.10.2**
 
 Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public API und unterstützt die Erstellung und Verwaltung von Rechnungen und Gutschriften aus WooCommerce-Bestellungen.
 
@@ -8,6 +8,8 @@ Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public AP
 
 - Automatische oder manuelle Rechnungserstellung aus WooCommerce-Bestellungen.
 - Automatischer read-only Abgleich historischer Bestellungen mit bereits vorhandenen Lexware-Rechnungen anhand Bestellnummer im Einleitungstext und identischem Bruttobetrag.
+- Manueller Start bzw. Neustart des historischen Rechnungsabgleichs mit sichtbarem Status und Fortschrittswerten.
+- Bereits verknüpfte Rechnungen werden beim historischen Abgleich nicht überschrieben; frühere Prüfungen ohne Treffer können bei einem manuellen Neustart erneut geprüft werden.
 - Sichere Kontaktzuordnung anhand exakter E-Mail-Adressen.
 - Erstellung von Lexware-Kontakten, ohne bestehende Kontakte automatisch destruktiv zu überschreiben.
 - Queue-basierte Verarbeitung mit Deduplizierung und Sperrmechanismus.
@@ -35,6 +37,7 @@ Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public AP
 3. Plugin aktivieren.
 4. API-Key, Trigger-Status und gewünschte Synchronisationsoptionen konfigurieren.
 5. Nach Konfiguration des API-Keys startet der historische Rechnungsabgleich im Hintergrund. Wegen des Lexware-API-Limits wird er in kleinen Batches ausgeführt.
+6. Der historische Abgleich kann bei Bedarf im WooCommerce-Administrationsbereich der Accounting Bridge manuell gestartet oder neu gestartet werden.
 
 ## Konfiguration
 
@@ -45,6 +48,28 @@ define( 'LEXWARE_CONNECTOR_API_KEY', 'DEIN_API_KEY' );
 ```
 
 Die Konstante hat Vorrang vor einem in WordPress gespeicherten Schlüssel.
+
+## Historischer Rechnungsabgleich
+
+Der historische Rechnungsabgleich dient dazu, bereits vor der Installation oder Aktivierung des Plugins vorhandene WooCommerce-Bestellungen mit bestehenden Lexware-Rechnungen zu verknüpfen.
+
+Der Abgleich arbeitet gegenüber Lexware **read-only**. Er erstellt, verändert oder storniert bei diesem Vorgang keine Rechnungen. Eine Zuordnung erfolgt nur, wenn die Bestellnummer im Lexware-Beleg gefunden wird und der Bruttobetrag zur WooCommerce-Bestellung passt.
+
+Seit Version **2026.10.2** kann der Abgleich im WooCommerce-Administrationsbereich manuell gestartet oder neu gestartet werden. Die Statusanzeige zeigt dabei unter anderem:
+
+- aktuellen Status des Abgleichs,
+- Batch-/Fortschrittsinformationen,
+- Anzahl geprüfter Bestellungen,
+- gefundene Zuordnungen,
+- Bestellungen ohne Treffer,
+- bereits vorhandene Verknüpfungen,
+- aufgetretene Fehler.
+
+Ein manueller Neustart setzt einen neuen Stichtag und prüft aktuell vorhandene, noch nicht verknüpfte Bestellungen erneut. Bereits verknüpfte Lexware-Rechnungen werden nicht überschrieben. Auch Bestellungen, die bei einem früheren Lauf ohne Treffer geblieben sind, können erneut geprüft werden.
+
+Um parallele Scanner zu vermeiden, schützt ein kurzlebiger Lock den Hintergrundprozess. Ein bereits aktiver Lauf wird nicht durch einen zweiten manuellen Lauf überlagert; veraltete Locks können nach Ablauf der vorgesehenen TTL selbstheilend bereinigt werden.
+
+Für die Hintergrundverarbeitung wird bevorzugt der WooCommerce Action Scheduler verwendet. Falls dieser nicht verfügbar ist, dient WP-Cron als Fallback.
 
 ## Externe Dienste & Datenschutz
 
