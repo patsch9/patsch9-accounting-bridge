@@ -42,6 +42,7 @@ jobs:
           exclude-directories: |
             .github
           exclude-files: |
+            .distignore
             VERSIONING.md
             DOCUMENTATION.md
             MIGRATION.md
