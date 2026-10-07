@@ -1159,7 +1159,12 @@ class WLC_API_Client {
         }
         if ($status < 200 || $status >= 300) {
             $decoded = json_decode($body, true);
-            $message = is_array($decoded) && !empty($decoded['message']) ? sanitize_text_field((string) $decoded['message']) : sprintf(__('Lexware API Fehler (HTTP %d)', 'patsch9-accounting-bridge'), $status);
+            if (is_array($decoded) && !empty($decoded['message'])) {
+                $message = sanitize_text_field((string) $decoded['message']);
+            } else {
+                /* translators: %d: HTTP status code returned by the Lexware Office API. */
+                $message = sprintf(__('Lexware API Fehler (HTTP %d)', 'patsch9-accounting-bridge'), $status);
+            }
             $message = function_exists('mb_substr') ? mb_substr($message, 0, 500) : substr($message, 0, 500);
             // A 429 explicitly means the write was rejected and is safe to retry.
             // POST transport/5xx errors are intentionally not auto-retried because
