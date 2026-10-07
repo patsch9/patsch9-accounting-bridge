@@ -4,7 +4,7 @@ Tags: woocommerce, lexware, invoices, accounting, api
 Requires at least: 6.9.5
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2026.10.0
+Stable tag: 2026.10.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,7 @@ The plugin declares WooCommerce High-Performance Order Storage (HPOS) compatibil
 == Features ==
 
 * Automatic or manual invoice creation from WooCommerce orders.
+* Read-only reconciliation of historical WooCommerce orders with existing Lexware invoices using the order number in the invoice introduction plus gross-total verification.
 * Exact email based Lexware customer matching.
 * Queue-based processing with deduplication and locking.
 * Action Scheduler integration with WP-Cron fallback.
@@ -93,6 +94,12 @@ The customer, order, line-item, price, tax, and reference data required to creat
 Not by default. Full data cleanup on uninstall must be explicitly enabled in the plugin settings.
 
 == Changelog ==
+
+= 2026.10.1 =
+* Adds background reconciliation for orders that existed before the integration was active.
+* Existing Lexware invoices are linked only after an exact order-number match in the invoice introduction and gross-total verification.
+* Ambiguous matches and API lookup errors fail closed to prevent duplicate invoices.
+* Manual unlinking opts the order out of automatic historical relinking.
 
 = 2026.10.0 =
 * First stable public release using the project-wide `YYYY.M.PATCH` versioning scheme.

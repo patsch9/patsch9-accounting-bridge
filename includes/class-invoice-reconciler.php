@@ -68,7 +68,7 @@ class WLC_Invoice_Reconciler {
 
     public function cleanup_scheduler() {
         if (function_exists('as_unschedule_all_actions')) {
-            as_unschedule_all_actions(self::HOOK, null, self::GROUP);
+            as_unschedule_all_actions(self::HOOK);
         }
         wp_clear_scheduled_hook(self::HOOK);
     }

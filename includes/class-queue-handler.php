@@ -280,7 +280,8 @@ class WLC_Queue_Handler {
             $data = $result->get_error_data();
             $retryable = is_array($data) && !empty($data['retryable']);
             $ambiguous = is_array($data) && !empty($data['ambiguous_write']);
-            $this->mark_as_failed($item, $result->get_error_message(), $retryable, $ambiguous);
+            $manual_check = is_array($data) && !empty($data['manual_check']);
+            $this->mark_as_failed($item, $result->get_error_message(), $retryable, ($ambiguous || $manual_check));
             return $result;
         }
 
@@ -327,6 +328,23 @@ class WLC_Queue_Handler {
         if ($existing) {
             return array('id' => $existing);
         }
+
+        // Historical orders may already have an invoice in Lexware from before
+        // this plugin managed the order. Reconcile read-only before any remote POST.
+        if (class_exists('WLC_Invoice_Reconciler')) {
+            $reconciled = WLC_Invoice_Reconciler::get_instance()->reconcile_before_create($order, $api_client);
+            if (is_wp_error($reconciled)) {
+                return $reconciled;
+            }
+            if (is_array($reconciled) && !empty($reconciled['id'])) {
+                return array(
+                    'skipped' => true,
+                    'reason'  => 'existing_invoice_reconciled',
+                    'id'      => sanitize_text_field((string) $reconciled['id']),
+                );
+            }
+        }
+
         $contact_id = null;
         if ('yes' === get_option('wlc_auto_sync_contacts', 'yes')) {
             $contact_result = $api_client->sync_contact($order);
