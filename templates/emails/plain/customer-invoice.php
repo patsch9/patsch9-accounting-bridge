@@ -20,13 +20,13 @@ echo "\n\n";
 
 echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n\n";
 
-do_action('woocommerce_email_order_details', $order, $sent_to_admin, $plain_text, $email);
+do_action('woocommerce_email_order_details', $order, $sent_to_admin, $plain_text, $email); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core email hook.
 
 echo "\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n\n";
 
-do_action('woocommerce_email_order_meta', $order, $sent_to_admin, $plain_text, $email);
+do_action('woocommerce_email_order_meta', $order, $sent_to_admin, $plain_text, $email); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core email hook.
 
-do_action('woocommerce_email_customer_details', $order, $sent_to_admin, $plain_text, $email);
+do_action('woocommerce_email_customer_details', $order, $sent_to_admin, $plain_text, $email); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core email hook.
 
 echo "\n\n";
 
@@ -34,4 +34,4 @@ echo wp_kses_post(wpautop(wptexturize($additional_content)));
 
 echo "\n=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
 
-echo esc_html(apply_filters('woocommerce_email_footer_text', get_option('woocommerce_email_footer_text')));
+echo esc_html(apply_filters('woocommerce_email_footer_text', get_option('woocommerce_email_footer_text'))); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core email hook.
