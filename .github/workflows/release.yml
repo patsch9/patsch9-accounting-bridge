@@ -63,14 +63,14 @@ jobs:
               return match.group(1).strip()
 
           header_version = required(r'^\s*\*\s*Version:\s*([^\s]+)', plugin, 'plugin header version')
-          constant_version = required(r"define\(\s*'WLC_VERSION'\s*,\s*'([^']+)'\s*\)", plugin, 'WLC_VERSION')
+          constant_version = required(r"define\(\s*'PATSACBR_VERSION'\s*,\s*'([^']+)'\s*\)", plugin, 'PATSACBR_VERSION')
           stable_tag = required(r'^Stable tag:\s*([^\s]+)\s*$', readme, 'readme Stable tag')
 
           version_pattern = re.compile(r'^\d{4}\.([1-9]|1[0-2])\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?$')
           stable_pattern = re.compile(r'^\d{4}\.([1-9]|1[0-2])\.(0|[1-9]\d*)$')
 
           if header_version != constant_version:
-              print(f'::error::Plugin header version ({header_version}) and WLC_VERSION ({constant_version}) differ.')
+              print(f'::error::Plugin header version ({header_version}) and PATSACBR_VERSION ({constant_version}) differ.')
               sys.exit(1)
 
           event = os.environ['GITHUB_EVENT_NAME']
