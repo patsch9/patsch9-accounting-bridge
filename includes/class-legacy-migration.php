@@ -98,6 +98,13 @@ final class PATSACBR_Legacy_Migration {
             self::migrate_option(self::legacy_prefix() . $suffix, 'patsacbr_' . $suffix);
         }
 
+        // WooCommerce email settings are stored under woocommerce_{email-id}_settings,
+        // so they need an explicit migration in addition to the plugin options above.
+        self::migrate_option(
+            'woocommerce_' . self::legacy_prefix() . 'invoice_settings',
+            'woocommerce_patsacbr_invoice_settings'
+        );
+
         if (function_exists('WC') && WC() && WC()->payment_gateways()) {
             foreach (WC()->payment_gateways->payment_gateways() as $gateway) {
                 if (!is_object($gateway) || empty($gateway->id)) {
