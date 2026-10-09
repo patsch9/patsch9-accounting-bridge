@@ -10,38 +10,38 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 // Accounting links can be operationally important after a reinstall. Preserve
 // all plugin data unless the administrator explicitly opted into destructive
 // cleanup before deleting the plugin.
-if ('yes' !== get_option('wlc_delete_data_on_uninstall', 'no')) {
+if ('yes' !== get_option('patsacbr_delete_data_on_uninstall', 'no')) {
     return;
 }
 
 global $wpdb;
 
-wp_clear_scheduled_hook('wlc_process_queue');
+wp_clear_scheduled_hook('patsacbr_process_queue');
 if (function_exists('as_unschedule_all_actions')) {
-    as_unschedule_all_actions('wlc_process_queue');
+    as_unschedule_all_actions('patsacbr_process_queue');
 }
 
 $options_to_delete = array(
-    'wlc_api_key',
-    'wlc_order_statuses',
-    'wlc_retry_attempts',
-    'wlc_invoice_title',
-    'wlc_invoice_introduction',
-    'wlc_payment_terms',
-    'wlc_rental_print_layout_id',
-    'wlc_payment_due_days',
-    'wlc_closing_text',
-    'wlc_finalize_immediately',
-    'wlc_auto_sync_contacts',
-    'wlc_show_in_customer_area',
-    'wlc_shipping_as_line_item',
-    'wlc_enable_logging',
-    'wlc_email_on_error',
-    'wlc_auto_send_email',
-    'wlc_delete_data_on_uninstall',
-    'wlc_error_logs',
-    'wlc_api_logs',
-    'wlc_db_version',
+    'patsacbr_api_key',
+    'patsacbr_order_statuses',
+    'patsacbr_retry_attempts',
+    'patsacbr_invoice_title',
+    'patsacbr_invoice_introduction',
+    'patsacbr_payment_terms',
+    'patsacbr_rental_print_layout_id',
+    'patsacbr_payment_due_days',
+    'patsacbr_closing_text',
+    'patsacbr_finalize_immediately',
+    'patsacbr_auto_sync_contacts',
+    'patsacbr_show_in_customer_area',
+    'patsacbr_shipping_as_line_item',
+    'patsacbr_enable_logging',
+    'patsacbr_email_on_error',
+    'patsacbr_auto_send_email',
+    'patsacbr_delete_data_on_uninstall',
+    'patsacbr_error_logs',
+    'patsacbr_api_logs',
+    'patsacbr_db_version',
 );
 foreach ($options_to_delete as $option) {
     delete_option($option);
@@ -49,7 +49,7 @@ foreach ($options_to_delete as $option) {
 
 // Payment-gateway-specific settings are dynamic and must not depend on
 // WooCommerce being active during uninstall.
-foreach (array('wlc_payment_terms_', 'wlc_payment_due_days_') as $prefix) {
+foreach (array('patsacbr_payment_terms_', 'patsacbr_payment_due_days_') as $prefix) {
     $like = $wpdb->esc_like($prefix) . '%';
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit opt-in uninstall cleanup of dynamically named plugin options; cached state is irrelevant during removal.
     $wpdb->query($wpdb->prepare(
@@ -59,19 +59,19 @@ foreach (array('wlc_payment_terms_', 'wlc_payment_due_days_') as $prefix) {
     ));
 }
 
-$table = $wpdb->prefix . 'wlc_queue';
+$table = $wpdb->prefix . 'patsacbr_queue';
 $wpdb->query($wpdb->prepare("DROP TABLE IF EXISTS %i", $table)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit opt-in uninstall cleanup of the plugin-owned queue table.
 
 $meta_keys = array(
-    '_wlc_lexware_invoice_id',
-    '_wlc_lexware_invoice_number',
-    '_wlc_lexware_credit_note_id',
-    '_wlc_lexware_invoice_voided',
-    '_wlc_lexware_contact_id',
-    '_wlc_lexware_credit_note_for_invoice_id',
-    '_wlc_lexware_credit_note_history',
-    '_wlc_lexware_update_source_invoice_id',
-    '_wlc_manual_invoice_entry',
+    '_patsacbr_lexware_invoice_id',
+    '_patsacbr_lexware_invoice_number',
+    '_patsacbr_lexware_credit_note_id',
+    '_patsacbr_lexware_invoice_voided',
+    '_patsacbr_lexware_contact_id',
+    '_patsacbr_lexware_credit_note_for_invoice_id',
+    '_patsacbr_lexware_credit_note_history',
+    '_patsacbr_lexware_update_source_invoice_id',
+    '_patsacbr_manual_invoice_entry',
 );
 
 // Legacy/post-based order storage.
@@ -110,8 +110,8 @@ if (empty($upload_dir['error'])) {
     }
 }
 
-delete_transient('wlc_api_test_result');
-foreach (array('_transient_wlc_rate_limit_', '_transient_timeout_wlc_rate_limit_') as $prefix) {
+delete_transient('patsacbr_api_test_result');
+foreach (array('_transient_patsacbr_rate_limit_', '_transient_timeout_patsacbr_rate_limit_') as $prefix) {
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit opt-in uninstall cleanup of plugin rate-limit transients; cached state is irrelevant during removal.
     $wpdb->query($wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",

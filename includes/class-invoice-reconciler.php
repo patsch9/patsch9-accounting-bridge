@@ -10,12 +10,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class WLC_Invoice_Reconciler {
+class PATSACBR_Invoice_Reconciler {
     const VERSION = '1';
-    const GROUP = 'wlc-reconciliation';
-    const HOOK = 'wlc_reconcile_existing_invoices';
+    const GROUP = 'patsacbr-reconciliation';
+    const HOOK = 'patsacbr_reconcile_existing_invoices';
     const BATCH_SIZE = 10;
-    const LOCK_OPTION = 'wlc_invoice_reconciliation_lock';
+    const LOCK_OPTION = 'patsacbr_invoice_reconciliation_lock';
     const LOCK_TTL = 1800;
 
     private static $instance = null;
@@ -30,31 +30,29 @@ class WLC_Invoice_Reconciler {
     private function __construct() {
         add_action('init', array($this, 'maybe_schedule'), 30);
         add_action(self::HOOK, array($this, 'process_batch'), 10, 1);
-        add_action('wlc_cleanup_scheduler', array($this, 'cleanup_scheduler'));
-        add_action('admin_post_wlc_restart_invoice_reconciliation', array($this, 'handle_manual_restart'));
-        add_action('admin_notices', array($this, 'render_completion_notice'));
-        add_action('admin_notices', array($this, 'render_status_controls'));
+        add_action('patsacbr_cleanup_scheduler', array($this, 'cleanup_scheduler'));
+        add_action('admin_post_patsacbr_restart_invoice_reconciliation', array($this, 'handle_manual_restart'));
     }
 
     public function maybe_schedule() {
-        if (self::VERSION === (string) get_option('wlc_invoice_reconciliation_version', '')) {
+        if (self::VERSION === (string) get_option('patsacbr_invoice_reconciliation_version', '')) {
             return;
         }
 
-        $api_client = new WLC_API_Client();
+        $api_client = new PATSACBR_API_Client();
         if (!$api_client->is_configured()) {
-            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
+            update_option('patsacbr_invoice_reconciliation_status', 'api_missing', false);
             return;
         }
 
-        if (!get_option('wlc_invoice_reconciliation_cutoff', 0)) {
-            update_option('wlc_invoice_reconciliation_cutoff', time(), false);
+        if (!get_option('patsacbr_invoice_reconciliation_cutoff', 0)) {
+            update_option('patsacbr_invoice_reconciliation_cutoff', time(), false);
         }
 
-        $page = max(1, absint(get_option('wlc_invoice_reconciliation_page', 1)));
+        $page = max(1, absint(get_option('patsacbr_invoice_reconciliation_page', 1)));
         $scheduled = $this->schedule_page($page);
         if ($scheduled) {
-            update_option('wlc_invoice_reconciliation_status', 'scheduled', false);
+            update_option('patsacbr_invoice_reconciliation_status', 'scheduled', false);
         }
     }
 
@@ -127,14 +125,14 @@ class WLC_Invoice_Reconciler {
      * @return int|bool|WP_Error Action ID / scheduling result or busy state.
      */
     public function restart_scan() {
-        $api_client = new WLC_API_Client();
+        $api_client = new PATSACBR_API_Client();
         if (!$api_client->is_configured()) {
-            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
+            update_option('patsacbr_invoice_reconciliation_status', 'api_missing', false);
             return false;
         }
 
         if ($this->is_batch_lock_active()) {
-            update_option('wlc_invoice_reconciliation_status', 'running', false);
+            update_option('patsacbr_invoice_reconciliation_status', 'running', false);
             return new WP_Error(
                 'reconciliation_busy',
                 __('Der historische Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen verhindert.', 'patsch9-accounting-bridge')
@@ -143,17 +141,17 @@ class WLC_Invoice_Reconciler {
 
         $this->cleanup_scheduler();
 
-        update_option('wlc_invoice_reconciliation_cutoff', time(), false);
-        update_option('wlc_invoice_reconciliation_page', 1, false);
-        delete_option('wlc_invoice_reconciliation_max_pages');
-        delete_option('wlc_invoice_reconciliation_version');
-        delete_option('wlc_invoice_reconciliation_last_error');
-        delete_option('wlc_invoice_reconciliation_notice_pending');
-        update_option('wlc_invoice_reconciliation_force_recheck', 'yes', false);
-        update_option('wlc_invoice_reconciliation_started_at', time(), false);
-        delete_option('wlc_invoice_reconciliation_finished_at');
+        update_option('patsacbr_invoice_reconciliation_cutoff', time(), false);
+        update_option('patsacbr_invoice_reconciliation_page', 1, false);
+        delete_option('patsacbr_invoice_reconciliation_max_pages');
+        delete_option('patsacbr_invoice_reconciliation_version');
+        delete_option('patsacbr_invoice_reconciliation_last_error');
+        delete_option('patsacbr_invoice_reconciliation_notice_pending');
+        update_option('patsacbr_invoice_reconciliation_force_recheck', 'yes', false);
+        update_option('patsacbr_invoice_reconciliation_started_at', time(), false);
+        delete_option('patsacbr_invoice_reconciliation_finished_at');
         update_option(
-            'wlc_invoice_reconciliation_stats',
+            'patsacbr_invoice_reconciliation_stats',
             array(
                 'checked' => 0,
                 'matched' => 0,
@@ -168,7 +166,7 @@ class WLC_Invoice_Reconciler {
         );
 
         $scheduled = $this->schedule_page(1, true);
-        update_option('wlc_invoice_reconciliation_status', $scheduled ? 'scheduled' : 'schedule_error', false);
+        update_option('patsacbr_invoice_reconciliation_status', $scheduled ? 'scheduled' : 'schedule_error', false);
         return $scheduled;
     }
 
@@ -177,7 +175,7 @@ class WLC_Invoice_Reconciler {
             wp_die(esc_html__('Keine Berechtigung.', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
 
-        check_admin_referer('wlc_restart_invoice_reconciliation');
+        check_admin_referer('patsacbr_restart_invoice_reconciliation');
 
         $result = $this->restart_scan();
         if (is_wp_error($result)) {
@@ -188,9 +186,9 @@ class WLC_Invoice_Reconciler {
         wp_safe_redirect(
             add_query_arg(
                 array(
-                    'page' => 'wlc-settings',
+                    'page' => 'patsacbr-settings',
                     'tab' => 'logs',
-                    'wlc_reconciliation_notice' => $notice,
+                    'patsacbr_reconciliation_notice' => $notice,
                 ),
                 admin_url('admin.php')
             )
@@ -228,9 +226,9 @@ class WLC_Invoice_Reconciler {
 
     public function process_batch($page = 1) {
         $page = max(1, absint($page));
-        $api_client = new WLC_API_Client();
+        $api_client = new PATSACBR_API_Client();
         if (!$api_client->is_configured()) {
-            update_option('wlc_invoice_reconciliation_status', 'api_missing', false);
+            update_option('patsacbr_invoice_reconciliation_status', 'api_missing', false);
             return;
         }
 
@@ -238,13 +236,13 @@ class WLC_Invoice_Reconciler {
             return;
         }
 
-        update_option('wlc_invoice_reconciliation_status', 'running', false);
+        update_option('patsacbr_invoice_reconciliation_status', 'running', false);
 
         try {
-            $cutoff = absint(get_option('wlc_invoice_reconciliation_cutoff', 0));
+            $cutoff = absint(get_option('patsacbr_invoice_reconciliation_cutoff', 0));
             if (!$cutoff) {
                 $cutoff = time();
-                update_option('wlc_invoice_reconciliation_cutoff', $cutoff, false);
+                update_option('patsacbr_invoice_reconciliation_cutoff', $cutoff, false);
             }
 
             $query = wc_get_orders(array(
@@ -258,17 +256,17 @@ class WLC_Invoice_Reconciler {
 
             if (!is_object($query) || !isset($query->orders, $query->max_num_pages)) {
                 $this->record_global_error('invalid_order_query', __('Der historische Rechnungsabgleich konnte die WooCommerce-Bestellungen nicht paginiert laden.', 'patsch9-accounting-bridge'));
-                update_option('wlc_invoice_reconciliation_status', 'error', false);
+                update_option('patsacbr_invoice_reconciliation_status', 'error', false);
                 return;
             }
 
-            $max_pages = absint(get_option('wlc_invoice_reconciliation_max_pages', 0));
+            $max_pages = absint(get_option('patsacbr_invoice_reconciliation_max_pages', 0));
             if (!$max_pages) {
                 $max_pages = max(1, absint($query->max_num_pages));
-                update_option('wlc_invoice_reconciliation_max_pages', $max_pages, false);
+                update_option('patsacbr_invoice_reconciliation_max_pages', $max_pages, false);
             }
 
-            $stats = get_option('wlc_invoice_reconciliation_stats', array());
+            $stats = get_option('patsacbr_invoice_reconciliation_stats', array());
             $stats = wp_parse_args(is_array($stats) ? $stats : array(), array(
                 'checked' => 0,
                 'matched' => 0,
@@ -279,24 +277,24 @@ class WLC_Invoice_Reconciler {
                 'skipped_update' => 0,
                 'errors' => 0,
             ));
-            $force_recheck = 'yes' === get_option('wlc_invoice_reconciliation_force_recheck', 'no');
+            $force_recheck = 'yes' === get_option('patsacbr_invoice_reconciliation_force_recheck', 'no');
 
             foreach ($query->orders as $order) {
                 if (!$order instanceof WC_Order) {
                     continue;
                 }
 
-                if ($order->get_meta('_wlc_lexware_invoice_id')) {
+                if ($order->get_meta('_patsacbr_lexware_invoice_id')) {
                     $stats['skipped_existing']++;
                     continue;
                 }
 
-                if ('yes' === $order->get_meta('_wlc_skip_auto_reconciliation')) {
+                if ('yes' === $order->get_meta('_patsacbr_skip_auto_reconciliation')) {
                     $stats['skipped_manual']++;
                     continue;
                 }
 
-                if ($order->get_meta('_wlc_lexware_update_source_invoice_id')) {
+                if ($order->get_meta('_patsacbr_lexware_update_source_invoice_id')) {
                     $stats['skipped_update']++;
                     continue;
                 }
@@ -307,7 +305,7 @@ class WLC_Invoice_Reconciler {
                     continue;
                 }
 
-                if (!$force_recheck && self::VERSION === (string) $order->get_meta('_wlc_lexware_reconciliation_checked')) {
+                if (!$force_recheck && self::VERSION === (string) $order->get_meta('_patsacbr_lexware_reconciliation_checked')) {
                     continue;
                 }
 
@@ -322,28 +320,28 @@ class WLC_Invoice_Reconciler {
                 }
             }
 
-            update_option('wlc_invoice_reconciliation_stats', $stats, false);
+            update_option('patsacbr_invoice_reconciliation_stats', $stats, false);
 
             if ($page < $max_pages) {
                 $next_page = $page + 1;
-                update_option('wlc_invoice_reconciliation_page', $next_page, false);
+                update_option('patsacbr_invoice_reconciliation_page', $next_page, false);
                 $scheduled = $this->schedule_page($next_page);
                 if (!$scheduled) {
                     $this->record_global_error('schedule_failed', __('Der nächste Batch des historischen Rechnungsabgleichs konnte nicht geplant werden.', 'patsch9-accounting-bridge'));
-                    update_option('wlc_invoice_reconciliation_status', 'schedule_error', false);
+                    update_option('patsacbr_invoice_reconciliation_status', 'schedule_error', false);
                 } else {
-                    update_option('wlc_invoice_reconciliation_status', 'scheduled', false);
+                    update_option('patsacbr_invoice_reconciliation_status', 'scheduled', false);
                 }
                 return;
             }
 
-            update_option('wlc_invoice_reconciliation_version', self::VERSION, false);
-            update_option('wlc_invoice_reconciliation_page', 1, false);
-            delete_option('wlc_invoice_reconciliation_max_pages');
-            delete_option('wlc_invoice_reconciliation_force_recheck');
-            update_option('wlc_invoice_reconciliation_finished_at', time(), false);
-            update_option('wlc_invoice_reconciliation_status', 'completed', false);
-            update_option('wlc_invoice_reconciliation_notice_pending', 'yes', false);
+            update_option('patsacbr_invoice_reconciliation_version', self::VERSION, false);
+            update_option('patsacbr_invoice_reconciliation_page', 1, false);
+            delete_option('patsacbr_invoice_reconciliation_max_pages');
+            delete_option('patsacbr_invoice_reconciliation_force_recheck');
+            update_option('patsacbr_invoice_reconciliation_finished_at', time(), false);
+            update_option('patsacbr_invoice_reconciliation_status', 'completed', false);
+            update_option('patsacbr_invoice_reconciliation_notice_pending', 'yes', false);
         } finally {
             $this->release_batch_lock();
         }
@@ -354,19 +352,19 @@ class WLC_Invoice_Reconciler {
             return new WP_Error('invalid_order', __('Ungültige Bestellung für den Lexware-Abgleich.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
-        if ($order->get_meta('_wlc_lexware_invoice_id')) {
-            return array('id' => sanitize_text_field((string) $order->get_meta('_wlc_lexware_invoice_id')));
+        if ($order->get_meta('_patsacbr_lexware_invoice_id')) {
+            return array('id' => sanitize_text_field((string) $order->get_meta('_patsacbr_lexware_invoice_id')));
         }
 
-        if ('yes' === $order->get_meta('_wlc_skip_auto_reconciliation')) {
+        if ('yes' === $order->get_meta('_patsacbr_skip_auto_reconciliation')) {
             return null;
         }
 
-        if ($order->get_meta('_wlc_lexware_update_source_invoice_id')) {
+        if ($order->get_meta('_patsacbr_lexware_update_source_invoice_id')) {
             return null;
         }
 
-        $cutoff = absint(get_option('wlc_invoice_reconciliation_cutoff', 0));
+        $cutoff = absint(get_option('patsacbr_invoice_reconciliation_cutoff', 0));
         $created = $order->get_date_created();
         if (!$cutoff || !$created || $created->getTimestamp() > $cutoff) {
             return null;
@@ -375,8 +373,8 @@ class WLC_Invoice_Reconciler {
         // Never trust an earlier "not found" result immediately before a
         // financial write. An invoice may have been created/imported in Lexware
         // after the background scan. Re-checking here prevents duplicate invoices.
-        if (!$api_client instanceof WLC_API_Client) {
-            $api_client = new WLC_API_Client();
+        if (!$api_client instanceof PATSACBR_API_Client) {
+            $api_client = new PATSACBR_API_Client();
         }
 
         return $this->reconcile_order($order, $api_client, true);
@@ -387,35 +385,35 @@ class WLC_Invoice_Reconciler {
             return new WP_Error('invalid_order', __('Ungültige Bestellung für den Lexware-Abgleich.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
-        if ($order->get_meta('_wlc_lexware_invoice_id')) {
-            return array('id' => sanitize_text_field((string) $order->get_meta('_wlc_lexware_invoice_id')));
+        if ($order->get_meta('_patsacbr_lexware_invoice_id')) {
+            return array('id' => sanitize_text_field((string) $order->get_meta('_patsacbr_lexware_invoice_id')));
         }
 
-        if ('yes' === $order->get_meta('_wlc_skip_auto_reconciliation')) {
+        if ('yes' === $order->get_meta('_patsacbr_skip_auto_reconciliation')) {
             return null;
         }
 
-        if ($order->get_meta('_wlc_lexware_update_source_invoice_id')) {
+        if ($order->get_meta('_patsacbr_lexware_update_source_invoice_id')) {
             return null;
         }
 
-        if (!$api_client instanceof WLC_API_Client) {
-            $api_client = new WLC_API_Client();
+        if (!$api_client instanceof PATSACBR_API_Client) {
+            $api_client = new PATSACBR_API_Client();
         }
 
-        $cutoff = absint(get_option('wlc_invoice_reconciliation_cutoff', 0));
+        $cutoff = absint(get_option('patsacbr_invoice_reconciliation_cutoff', 0));
         $match = $api_client->find_invoice_by_order($order, $cutoff);
         if (is_wp_error($match)) {
-            $order->update_meta_data('_wlc_lexware_reconciliation_state', 'error');
-            $order->update_meta_data('_wlc_lexware_reconciliation_error', sanitize_text_field($match->get_error_message()));
+            $order->update_meta_data('_patsacbr_lexware_reconciliation_state', 'error');
+            $order->update_meta_data('_patsacbr_lexware_reconciliation_error', sanitize_text_field($match->get_error_message()));
             $order->save();
             return $match;
         }
 
         if (!$match) {
-            $order->update_meta_data('_wlc_lexware_reconciliation_checked', self::VERSION);
-            $order->update_meta_data('_wlc_lexware_reconciliation_state', 'not_found');
-            $order->delete_meta_data('_wlc_lexware_reconciliation_error');
+            $order->update_meta_data('_patsacbr_lexware_reconciliation_checked', self::VERSION);
+            $order->update_meta_data('_patsacbr_lexware_reconciliation_state', 'not_found');
+            $order->delete_meta_data('_patsacbr_lexware_reconciliation_error');
             $order->save();
             return null;
         }
@@ -427,16 +425,16 @@ class WLC_Invoice_Reconciler {
             return new WP_Error('invalid_reconciliation_match', __('Lexware hat beim historischen Rechnungsabgleich unvollständige Rechnungsdaten geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
-        $order->update_meta_data('_wlc_lexware_invoice_id', $invoice_id);
-        $order->update_meta_data('_wlc_lexware_invoice_number', $invoice_number);
-        $order->update_meta_data('_wlc_lexware_invoice_reconciled', 'yes');
-        $order->update_meta_data('_wlc_lexware_reconciliation_checked', self::VERSION);
-        $order->update_meta_data('_wlc_lexware_reconciliation_state', 'matched');
-        $order->delete_meta_data('_wlc_lexware_reconciliation_error');
+        $order->update_meta_data('_patsacbr_lexware_invoice_id', $invoice_id);
+        $order->update_meta_data('_patsacbr_lexware_invoice_number', $invoice_number);
+        $order->update_meta_data('_patsacbr_lexware_invoice_reconciled', 'yes');
+        $order->update_meta_data('_patsacbr_lexware_reconciliation_checked', self::VERSION);
+        $order->update_meta_data('_patsacbr_lexware_reconciliation_state', 'matched');
+        $order->delete_meta_data('_patsacbr_lexware_reconciliation_error');
         if ('voided' === $invoice_status) {
-            $order->update_meta_data('_wlc_lexware_invoice_voided', 'yes');
+            $order->update_meta_data('_patsacbr_lexware_invoice_voided', 'yes');
         } else {
-            $order->delete_meta_data('_wlc_lexware_invoice_voided');
+            $order->delete_meta_data('_patsacbr_lexware_invoice_voided');
         }
         $order->save();
 
@@ -453,7 +451,7 @@ class WLC_Invoice_Reconciler {
     }
 
     private function record_global_error($code, $message) {
-        update_option('wlc_invoice_reconciliation_last_error', array(
+        update_option('patsacbr_invoice_reconciliation_last_error', array(
             'code' => sanitize_key((string) $code),
             'message' => sanitize_text_field((string) $message),
             'time' => time(),
@@ -461,12 +459,12 @@ class WLC_Invoice_Reconciler {
     }
 
     public function render_completion_notice() {
-        if (!current_user_can('manage_woocommerce') || 'yes' !== get_option('wlc_invoice_reconciliation_notice_pending', 'no')) {
+        if (!current_user_can('manage_woocommerce') || 'yes' !== get_option('patsacbr_invoice_reconciliation_notice_pending', 'no')) {
             return;
         }
 
-        delete_option('wlc_invoice_reconciliation_notice_pending');
-        $stats = get_option('wlc_invoice_reconciliation_stats', array());
+        delete_option('patsacbr_invoice_reconciliation_notice_pending');
+        $stats = get_option('patsacbr_invoice_reconciliation_stats', array());
         $stats = wp_parse_args(is_array($stats) ? $stats : array(), array(
             'matched' => 0,
             'not_found' => 0,
@@ -495,11 +493,11 @@ class WLC_Invoice_Reconciler {
         }
 
         $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        if (!$screen || 'woocommerce_page_wlc-settings' !== $screen->id) {
+        if (!$screen || 'woocommerce_page_patsacbr-settings' !== $screen->id) {
             return;
         }
 
-        $stats = get_option('wlc_invoice_reconciliation_stats', array());
+        $stats = get_option('patsacbr_invoice_reconciliation_stats', array());
         $stats = wp_parse_args(is_array($stats) ? $stats : array(), array(
             'checked' => 0,
             'matched' => 0,
@@ -507,11 +505,11 @@ class WLC_Invoice_Reconciler {
             'skipped_existing' => 0,
             'errors' => 0,
         ));
-        $status = sanitize_key((string) get_option('wlc_invoice_reconciliation_status', 'idle'));
-        $page = max(1, absint(get_option('wlc_invoice_reconciliation_page', 1)));
-        $max_pages = absint(get_option('wlc_invoice_reconciliation_max_pages', 0));
-        $notice = isset($_GET['wlc_reconciliation_notice']) ? sanitize_key(wp_unslash($_GET['wlc_reconciliation_notice'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only status after nonce-protected redirect.
-        $last_error = get_option('wlc_invoice_reconciliation_last_error', array());
+        $status = sanitize_key((string) get_option('patsacbr_invoice_reconciliation_status', 'idle'));
+        $page = max(1, absint(get_option('patsacbr_invoice_reconciliation_page', 1)));
+        $max_pages = absint(get_option('patsacbr_invoice_reconciliation_max_pages', 0));
+        $notice = isset($_GET['patsacbr_reconciliation_notice']) ? sanitize_key(wp_unslash($_GET['patsacbr_reconciliation_notice'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only status after nonce-protected redirect.
+        $last_error = get_option('patsacbr_invoice_reconciliation_last_error', array());
         $last_error_message = is_array($last_error) && !empty($last_error['message']) ? sanitize_text_field((string) $last_error['message']) : '';
 
         $labels = array(
@@ -559,8 +557,8 @@ class WLC_Invoice_Reconciler {
 
         echo '<p>' . esc_html__('Ein manueller Neustart prüft alle aktuell vorhandenen, noch nicht verknüpften Bestellungen erneut. Bereits gespeicherte Lexware-Rechnungsverknüpfungen werden nicht verändert.', 'patsch9-accounting-bridge') . '</p>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
-        echo '<input type="hidden" name="action" value="wlc_restart_invoice_reconciliation">';
-        wp_nonce_field('wlc_restart_invoice_reconciliation');
+        echo '<input type="hidden" name="action" value="patsacbr_restart_invoice_reconciliation">';
+        wp_nonce_field('patsacbr_restart_invoice_reconciliation');
         submit_button(__('Historischen Rechnungsabgleich starten / neu starten', 'patsch9-accounting-bridge'), 'secondary', 'submit', false);
         echo '</form>';
         echo '</div>';

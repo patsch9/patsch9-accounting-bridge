@@ -3,14 +3,14 @@
  * Plugin Name: Patsch9 Accounting Bridge for WooCommerce
  * Plugin URI: https://github.com/patsch9/patsch9-accounting-bridge
  * Description: Automatische Rechnungserstellung in Lexware Office aus WooCommerce-Bestellungen mit vollständiger Synchronisation und Kundenbereichs-Integration
- * Version: 2026.10.2
+ * Version: 2026.10.3
  * Author: Patrick Schmidt
  * Author URI: https://github.com/patsch9
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: patsch9-accounting-bridge
  * Domain Path: /languages
- * Requires at least: 6.9.5
+ * Requires at least: 6.9
  * Requires PHP: 8.2
  * WC requires at least: 10.9.4
  * WC tested up to: 10.9.4
@@ -26,16 +26,18 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin-Konstanten definieren
-define('WLC_VERSION', '2026.10.2');
-define('WLC_DB_VERSION', '1.3.6');
-define('WLC_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('WLC_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('WLC_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define('PATSACBR_VERSION', '2026.10.3');
+define('PATSACBR_DB_VERSION', '1.4.0');
+define('PATSACBR_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('PATSACBR_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('PATSACBR_PLUGIN_BASENAME', plugin_basename(__FILE__));
+
+require_once PATSACBR_PLUGIN_DIR . 'includes/class-legacy-migration.php';
 
 /**
  * Hauptklasse des Plugins
  */
-class WLC_Connector {
+class PATSACBR_Connector {
 
     /**
      * Singleton-Instanz
@@ -97,18 +99,21 @@ class WLC_Connector {
             return;
         }
 
+        // Migrate identifiers from pre-directory builds before settings are read.
+        PATSACBR_Legacy_Migration::run();
+
         // Hinweis: load_plugin_textdomain() ist ab WP 4.6+ nicht mehr notwendig.
         // WordPress lädt Übersetzungen automatisch basierend auf Text Domain Header.
         // Für manuelle .mo/.po-Dateien im /languages Ordner kann der Aufruf optional bleiben,
         // wird aber von WordPress.org Plugin Check als discouraged markiert.
 
         // Datenbankschema bei Updates sicher migrieren.
-        if (get_option('wlc_db_version') !== WLC_DB_VERSION) {
+        if (get_option('patsacbr_db_version') !== PATSACBR_DB_VERSION) {
             $this->create_database_tables();
             $this->cleanup_legacy_pdf_cache();
             // 1.3.1: print layouts do not control Lexware's invoice payment QR.
             // Remove the obsolete rental-only layout setting from previous builds.
-            delete_option('wlc_rental_print_layout_id');
+            delete_option('patsacbr_rental_print_layout_id');
         }
 
         // Lade Plugin-Klassen
@@ -126,12 +131,12 @@ class WLC_Connector {
  * Lade alle Abhängigkeiten
  */
 private function load_dependencies() {
-    require_once WLC_PLUGIN_DIR . 'includes/class-lexware-api-client.php';
-    require_once WLC_PLUGIN_DIR . 'includes/class-invoice-reconciler.php';
-    require_once WLC_PLUGIN_DIR . 'includes/class-woo-lexware-integration.php';
-    require_once WLC_PLUGIN_DIR . 'includes/class-admin-settings.php';
-    require_once WLC_PLUGIN_DIR . 'includes/class-customer-area.php';
-    require_once WLC_PLUGIN_DIR . 'includes/class-queue-handler.php';
+    require_once PATSACBR_PLUGIN_DIR . 'includes/class-lexware-api-client.php';
+    require_once PATSACBR_PLUGIN_DIR . 'includes/class-invoice-reconciler.php';
+    require_once PATSACBR_PLUGIN_DIR . 'includes/class-woo-lexware-integration.php';
+    require_once PATSACBR_PLUGIN_DIR . 'includes/class-admin-settings.php';
+    require_once PATSACBR_PLUGIN_DIR . 'includes/class-customer-area.php';
+    require_once PATSACBR_PLUGIN_DIR . 'includes/class-queue-handler.php';
     // WICHTIG: class-invoice-email.php NICHT hier laden!
 }
 
@@ -140,10 +145,10 @@ private function load_dependencies() {
  */
 public function register_invoice_email($email_classes) {
     // Lade E-Mail-Klasse erst hier (lazy loading)
-    if (!class_exists('WLC_Invoice_Email')) {
-        require_once WLC_PLUGIN_DIR . 'includes/class-invoice-email.php';
+    if (!class_exists('PATSACBR_Invoice_Email')) {
+        require_once PATSACBR_PLUGIN_DIR . 'includes/class-invoice-email.php';
     }
-    $email_classes['WLC_Invoice_Email'] = new WLC_Invoice_Email();
+    $email_classes['PATSACBR_Invoice_Email'] = new PATSACBR_Invoice_Email();
     return $email_classes;
 }
 
@@ -153,23 +158,34 @@ public function register_invoice_email($email_classes) {
     private function init_components() {
         // Admin-Settings
         if (is_admin()) {
-            WLC_Admin_Settings::get_instance();
+            PATSACBR_Admin_Settings::get_instance();
         }
 
         // Historische Rechnungen im Hintergrund read-only zuordnen.
-        WLC_Invoice_Reconciler::get_instance();
+        PATSACBR_Invoice_Reconciler::get_instance();
 
         // WooCommerce-Integration
-        WLC_WooCommerce_Integration::get_instance();
+        PATSACBR_WooCommerce_Integration::get_instance();
 
         // Kundenbereich
-        WLC_Customer_Area::get_instance();
+        PATSACBR_Customer_Area::get_instance();
 
         // Queue-Handler
-        WLC_Queue_Handler::get_instance();
+        PATSACBR_Queue_Handler::get_instance();
+    }
+
+    private function should_show_dependency_notice() {
+        if (!is_admin() || !function_exists('get_current_screen')) {
+            return false;
+        }
+        $screen = get_current_screen();
+        return $screen && 'plugins' === $screen->id;
     }
 
     public function woocommerce_version_notice() {
+        if (!$this->should_show_dependency_notice()) {
+            return;
+        }
         echo '<div class="notice notice-error"><p>' . esc_html__('Patsch9 Accounting Bridge benötigt WooCommerce 10.9.4 oder höher.', 'patsch9-accounting-bridge') . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
     }
 
@@ -181,11 +197,14 @@ public function register_invoice_email($email_classes) {
         if (!$this->check_requirements()) {
             deactivate_plugins(plugin_basename(__FILE__));
             wp_die(
-                esc_html__('Patsch9 Accounting Bridge erfordert WordPress 6.9.5 oder höher, WooCommerce 10.9.4 oder höher und PHP 8.2 oder höher.', 'patsch9-accounting-bridge'),
+                esc_html__('Patsch9 Accounting Bridge erfordert WordPress 6.9 oder höher, WooCommerce 10.9.4 oder höher und PHP 8.2 oder höher.', 'patsch9-accounting-bridge'),
                 esc_html__('Plugin-Aktivierung fehlgeschlagen', 'patsch9-accounting-bridge'),
                 array('back_link' => true)
             );
         }
+
+        // Preserve settings from pre-directory builds before defaults are created.
+        PATSACBR_Legacy_Migration::run();
 
         // Erstelle Datenbank-Tabelle für Queue
         $this->create_database_tables();
@@ -198,8 +217,8 @@ public function register_invoice_email($email_classes) {
 
         // Orders existing before this feature becomes active form the immutable
         // historical reconciliation set. New orders are handled normally.
-        if (!get_option('wlc_invoice_reconciliation_cutoff', 0)) {
-            add_option('wlc_invoice_reconciliation_cutoff', time(), '', false);
+        if (!get_option('patsacbr_invoice_reconciliation_cutoff', 0)) {
+            add_option('patsacbr_invoice_reconciliation_cutoff', time(), '', false);
         }
 
     }
@@ -213,9 +232,9 @@ public function register_invoice_email($email_classes) {
             return false;
         }
 
-        // WordPress-Sicherheitsbasis prüfen (6.9.5 enthält die Backports für die im Juli 2026 behobenen Core-Lücken).
+        // Niedrigste unterstützte WordPress-Hauptversion prüfen.
         global $wp_version;
-        if (!isset($wp_version) || version_compare((string) $wp_version, '6.9.5', '<')) {
+        if (!isset($wp_version) || version_compare((string) $wp_version, '6.9', '<')) {
             return false;
         }
 
@@ -268,7 +287,7 @@ public function register_invoice_email($email_classes) {
         global $wpdb;
 
         $charset_collate = $wpdb->get_charset_collate();
-        $table_name = $wpdb->prefix . 'wlc_queue';
+        $table_name = $wpdb->prefix . 'patsacbr_queue';
 
         $sql = "CREATE TABLE $table_name (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -293,7 +312,8 @@ public function register_invoice_email($email_classes) {
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
-        update_option('wlc_db_version', WLC_DB_VERSION, false);
+        PATSACBR_Legacy_Migration::migrate_queue_table();
+        update_option('patsacbr_db_version', PATSACBR_DB_VERSION, false);
     }
 
     /**
@@ -301,21 +321,21 @@ public function register_invoice_email($email_classes) {
      */
     private function set_default_options() {
         $defaults = array(
-            'wlc_api_key' => '',
-            'wlc_order_statuses' => array('wc-completed', 'wc-processing'),
-            'wlc_invoice_title' => 'Rechnung',
-            'wlc_invoice_introduction' => 'Vielen Dank für Ihre Bestellung [order_number] vom [order_date].',
-            'wlc_payment_terms' => 'Zahlbar innerhalb von 14 Tagen ohne Abzug.',
-            'wlc_payment_due_days' => '14',
-            'wlc_closing_text' => 'Vielen Dank für Ihr Vertrauen.',
-            'wlc_finalize_immediately' => 'yes',
-            'wlc_auto_sync_contacts' => 'yes',
-            'wlc_show_in_customer_area' => 'yes',
-            'wlc_enable_logging' => 'no',
-            'wlc_email_on_error' => 'yes',
-            'wlc_retry_attempts' => '3',
-            'wlc_shipping_as_line_item' => 'yes',
-            'wlc_auto_send_email' => 'no'
+            'patsacbr_api_key' => '',
+            'patsacbr_order_statuses' => array('wc-completed', 'wc-processing'),
+            'patsacbr_invoice_title' => 'Rechnung',
+            'patsacbr_invoice_introduction' => 'Vielen Dank für Ihre Bestellung [order_number] vom [order_date].',
+            'patsacbr_payment_terms' => 'Zahlbar innerhalb von 14 Tagen ohne Abzug.',
+            'patsacbr_payment_due_days' => '14',
+            'patsacbr_closing_text' => 'Vielen Dank für Ihr Vertrauen.',
+            'patsacbr_finalize_immediately' => 'yes',
+            'patsacbr_auto_sync_contacts' => 'yes',
+            'patsacbr_show_in_customer_area' => 'yes',
+            'patsacbr_enable_logging' => 'no',
+            'patsacbr_email_on_error' => 'yes',
+            'patsacbr_retry_attempts' => '3',
+            'patsacbr_shipping_as_line_item' => 'yes',
+            'patsacbr_auto_send_email' => 'no'
         );
 
         foreach ($defaults as $key => $value) {
@@ -330,8 +350,8 @@ public function register_invoice_email($email_classes) {
 	*/
 	public function deactivate() {
 		// Cleanup Action Scheduler / WP Cron
-		do_action('wlc_cleanup_scheduler');
-		
+		do_action('patsacbr_cleanup_scheduler');
+
 		// Hinweis: Daten werden NICHT gelöscht bei Deaktivierung
 		// Nur bei Deinstallation (siehe uninstall.php)
 	}
@@ -348,6 +368,9 @@ public function register_invoice_email($email_classes) {
      * WooCommerce-Fehler-Hinweis
      */
     public function woocommerce_missing_notice() {
+        if (!$this->should_show_dependency_notice()) {
+            return;
+        }
         ?>
         <div class="error">
             <p>
@@ -362,7 +385,7 @@ public function register_invoice_email($email_classes) {
 /**
  * Sicherheits-Helper-Funktionen
  */
-class WLC_Security {
+class PATSACBR_Security {
 
     /**
      * Validiere und sanitize API-Key
@@ -406,7 +429,7 @@ class WLC_Security {
      * Rate Limiting für manuelle Aktionen
      */
     public static function check_rate_limit($action, $user_id, $limit = 10, $period = 60) {
-        $transient_key = 'wlc_rate_limit_' . $user_id . '_' . $action;
+        $transient_key = 'patsacbr_rate_limit_' . $user_id . '_' . $action;
         $count = get_transient($transient_key);
 
         if ($count === false) {
@@ -424,9 +447,9 @@ class WLC_Security {
 }
 
 // Plugin initialisieren
-function wlc_connector() {
-    return WLC_Connector::get_instance();
+function patsacbr_connector() {
+    return PATSACBR_Connector::get_instance();
 }
 
 // Starte Plugin
-wlc_connector();
+patsacbr_connector();

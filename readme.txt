@@ -1,10 +1,10 @@
 === Patsch9 Accounting Bridge for WooCommerce ===
 Contributors: patsch9
 Tags: woocommerce, lexware, invoices, accounting, api
-Requires at least: 6.9.5
+Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2026.10.2
+Stable tag: 2026.10.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -34,7 +34,7 @@ The plugin declares WooCommerce High-Performance Order Storage (HPOS) compatibil
 
 == Requirements ==
 
-* WordPress 6.9.5 or newer.
+* WordPress 6.9 or newer.
 * PHP 8.2 or newer.
 * WooCommerce 10.9.4 or newer.
 * A Lexware Office account with Public API access enabled.
@@ -51,7 +51,7 @@ The plugin declares WooCommerce High-Performance Order Storage (HPOS) compatibil
 
 For improved secret handling, the Lexware API key can be stored outside the WordPress database in `wp-config.php`:
 
-`define( 'LEXWARE_CONNECTOR_API_KEY', 'YOUR_API_KEY' );`
+`define( 'PATSACBR_LEXWARE_API_KEY', 'YOUR_API_KEY' );`
 
 The constant takes precedence over a key stored in WordPress options.
 
@@ -77,7 +77,7 @@ API logging is disabled by default on new installations. When logging is enabled
 * WooCommerce HPOS compatibility is declared.
 * WooCommerce order data is accessed through the WooCommerce CRUD API.
 * Action Scheduler is used when available; WP-Cron is used as a fallback.
-* Historical internal `WLC_*` and `wlc_*` identifiers remain unchanged for backward compatibility.
+* Plugin-owned declarations, hooks and stored data use the unique `PATSACBR_` / `patsacbr_` prefix. Data from pre-directory builds is migrated during upgrade.
 
 == Frequently Asked Questions ==
 
@@ -94,6 +94,13 @@ The customer, order, line-item, price, tax, and reference data required to creat
 Not by default. Full data cleanup on uninstall must be explicitly enabled in the plugin settings.
 
 == Changelog ==
+
+= 2026.10.3 =
+* Addresses WordPress.org review findings: admin assets are enqueued, plugin-owned identifiers use a unique prefix, and admin notices are scoped to relevant screens.
+* Normalizes the minimum WordPress version header and migrates data from pre-directory builds.
+
+= 2026.10.2 =
+* Adds manual start/restart controls and progress reporting for historical Lexware invoice reconciliation.
 
 = 2026.10.1 =
 * Adds background reconciliation for orders that existed before the integration was active.

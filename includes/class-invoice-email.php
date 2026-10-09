@@ -12,18 +12,18 @@ if (!class_exists('WC_Email')) {
     return;
 }
 
-class WLC_Invoice_Email extends WC_Email {
+class PATSACBR_Invoice_Email extends WC_Email {
 
     private $pdf_path = null;
 
     public function __construct() {
-        $this->id = 'wlc_invoice';
+        $this->id = 'patsacbr_invoice';
         $this->customer_email = true;
         $this->title = __('Lexware Rechnung', 'patsch9-accounting-bridge');
         $this->description = __('E-Mail mit der Lexware-Rechnungsdatei als Anhang (PDF bzw. XRechnung-XML)', 'patsch9-accounting-bridge');
         $this->template_html = 'emails/customer-invoice.php';
         $this->template_plain = 'emails/plain/customer-invoice.php';
-        $this->template_base = WLC_PLUGIN_DIR . 'templates/';
+        $this->template_base = PATSACBR_PLUGIN_DIR . 'templates/';
         $this->placeholders = array(
             '{order_date}' => '',
             '{order_number}' => '',
@@ -58,13 +58,13 @@ class WLC_Invoice_Email extends WC_Email {
         $this->placeholders['{order_number}'] = $order->get_order_number();
         $this->pdf_path = null;
 
-        $invoice_id = $order->get_meta('_wlc_lexware_invoice_id');
+        $invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
         if (!$invoice_id) {
             $this->restore_locale();
             return false;
         }
 
-        $api_client = new WLC_API_Client();
+        $api_client = new PATSACBR_API_Client();
         $document = $api_client->download_invoice_document($invoice_id);
         if (is_wp_error($document) || empty($document['path']) || !file_exists($document['path'])) {
             $message = is_wp_error($document) ? $document->get_error_message() : __('Rechnungsdatei konnte nicht vorbereitet werden.', 'patsch9-accounting-bridge');
@@ -97,16 +97,16 @@ class WLC_Invoice_Email extends WC_Email {
      */
     public function get_attachments() {
         $attachments = parent::get_attachments();
-        
+
         if (!is_array($attachments)) {
             $attachments = array();
         }
-        
+
         // Füge PDF hinzu, falls vorhanden
         if ($this->pdf_path && file_exists($this->pdf_path)) {
             $attachments[] = $this->pdf_path;
         }
-        
+
         return apply_filters('woocommerce_email_attachments', $attachments, $this->id, $this->object, $this);
     }
 
