@@ -8,9 +8,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class WLC_Queue_Handler {
+class PATSACBR_Queue_Handler {
     private static $instance = null;
-    const GROUP = 'wlc-connector';
+    const GROUP = 'patsacbr-connector';
     const STALE_LOCK_MINUTES = 15;
 
     public static function get_instance() {
@@ -21,9 +21,9 @@ class WLC_Queue_Handler {
     }
 
     private function __construct() {
-        add_action('wlc_process_queue', array($this, 'process_queue'));
+        add_action('patsacbr_process_queue', array($this, 'process_queue'));
         add_action('action_scheduler_init', array($this, 'setup_scheduler'), 20);
-        add_action('wlc_cleanup_scheduler', array($this, 'cleanup_scheduler'));
+        add_action('patsacbr_cleanup_scheduler', array($this, 'cleanup_scheduler'));
     }
 
     public function setup_scheduler() {
@@ -31,21 +31,21 @@ class WLC_Queue_Handler {
             $this->setup_fallback_cron();
             return;
         }
-        if (!as_has_scheduled_action('wlc_process_queue', array(), self::GROUP)) {
-            as_schedule_recurring_action(time() + 10, 60, 'wlc_process_queue', array(), self::GROUP, true);
+        if (!as_has_scheduled_action('patsacbr_process_queue', array(), self::GROUP)) {
+            as_schedule_recurring_action(time() + 10, 60, 'patsacbr_process_queue', array(), self::GROUP, true);
         }
     }
 
     private function setup_fallback_cron() {
         add_filter('cron_schedules', array($this, 'add_cron_interval'));
-        if (!wp_next_scheduled('wlc_process_queue')) {
-            wp_schedule_event(time() + 10, 'wlc_every_minute', 'wlc_process_queue');
+        if (!wp_next_scheduled('patsacbr_process_queue')) {
+            wp_schedule_event(time() + 10, 'patsacbr_every_minute', 'patsacbr_process_queue');
         }
     }
 
     public function add_cron_interval($schedules) {
-        if (!isset($schedules['wlc_every_minute'])) {
-            $schedules['wlc_every_minute'] = array(
+        if (!isset($schedules['patsacbr_every_minute'])) {
+            $schedules['patsacbr_every_minute'] = array(
                 'interval' => MINUTE_IN_SECONDS,
                 'display'  => esc_html__('Jede Minute', 'patsch9-accounting-bridge'),
             );
@@ -55,11 +55,11 @@ class WLC_Queue_Handler {
 
     public function cleanup_scheduler() {
         if (function_exists('as_unschedule_all_actions')) {
-            as_unschedule_all_actions('wlc_process_queue', array(), self::GROUP);
+            as_unschedule_all_actions('patsacbr_process_queue', array(), self::GROUP);
             // Migration from older versions that used the default group.
-            as_unschedule_all_actions('wlc_process_queue');
+            as_unschedule_all_actions('patsacbr_process_queue');
         }
-        wp_clear_scheduled_hook('wlc_process_queue');
+        wp_clear_scheduled_hook('patsacbr_process_queue');
     }
 
     private static function allowed_actions() {
@@ -77,7 +77,7 @@ class WLC_Queue_Handler {
         if (!$order_id || !in_array($action, self::allowed_actions(), true) || !wc_get_order($order_id)) {
             return false;
         }
-        $table = $wpdb->prefix . 'wlc_queue';
+        $table = $wpdb->prefix . 'patsacbr_queue';
 
         // Compatibility guard for active rows created before dedupe_key existed.
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
@@ -113,7 +113,7 @@ class WLC_Queue_Handler {
 
     private function recover_stale_items() {
         global $wpdb;
-        $table = $wpdb->prefix . 'wlc_queue';
+        $table = $wpdb->prefix . 'patsacbr_queue';
         $cutoff = wp_date('Y-m-d H:i:s', time() - self::STALE_LOCK_MINUTES * MINUTE_IN_SECONDS, wp_timezone());
 
         // Every queue action can cause a remote write. If a PHP worker dies after
@@ -134,8 +134,8 @@ class WLC_Queue_Handler {
     private function claim_next_item() {
         global $wpdb;
         $this->recover_stale_items();
-        $table = $wpdb->prefix . 'wlc_queue';
-        $max_attempts = max(1, min(10, absint(get_option('wlc_retry_attempts', 3))));
+        $table = $wpdb->prefix . 'patsacbr_queue';
+        $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
         $now = current_time('mysql');
 
         // Several candidates are tried because another worker may claim one between SELECT and UPDATE.
@@ -173,8 +173,8 @@ class WLC_Queue_Handler {
         if (!$order_id || !in_array($action, self::allowed_actions(), true)) {
             return new WP_Error('invalid_queue_target', esc_html__('Ungültige Queue-Aktion.', 'patsch9-accounting-bridge'));
         }
-        $table = $wpdb->prefix . 'wlc_queue';
-        $max_attempts = max(1, min(10, absint(get_option('wlc_retry_attempts', 3))));
+        $table = $wpdb->prefix . 'patsacbr_queue';
+        $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
         $now = current_time('mysql');
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $id = $wpdb->get_var($wpdb->prepare(
@@ -261,7 +261,7 @@ class WLC_Queue_Handler {
             return new WP_Error('invalid_action', esc_html__('Unbekannte Queue-Aktion', 'patsch9-accounting-bridge'));
         }
 
-        $api_client = new WLC_API_Client();
+        $api_client = new PATSACBR_API_Client();
         switch ($item->action) {
             case 'create_invoice':
                 $result = $this->handle_create_invoice($order, $api_client);
@@ -299,13 +299,13 @@ class WLC_Queue_Handler {
             // invoice behind without a compensating credit note.
             $fresh_order = wc_get_order($order->get_id());
             if ($fresh_order && $fresh_order->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
-                if ($fresh_order->get_meta('_wlc_lexware_invoice_id') && 'yes' !== $fresh_order->get_meta('_wlc_lexware_invoice_voided')) {
+                if ($fresh_order->get_meta('_patsacbr_lexware_invoice_id') && 'yes' !== $fresh_order->get_meta('_patsacbr_lexware_invoice_voided')) {
                     self::add_to_queue($fresh_order->get_id(), 'void_invoice');
                     $fresh_order->add_order_note(esc_html__('Lexware: Bestellung wurde während/nach der Rechnungserstellung beendet; Gutschrift wurde automatisch vorgemerkt.', 'patsch9-accounting-bridge'));
                 }
                 return true;
             }
-            if ('yes' === get_option('wlc_auto_send_email', 'no')) {
+            if ('yes' === get_option('patsacbr_auto_send_email', 'no')) {
                 $this->send_invoice_email($fresh_order ?: $order);
             }
         }
@@ -315,9 +315,9 @@ class WLC_Queue_Handler {
     private function handle_create_invoice($order, $api_client) {
         // A stale automatic queue item must never create a new invoice for an order
         // which has already reached a terminal state before processing starts.
-        $existing = $order->get_meta('_wlc_lexware_invoice_id');
+        $existing = $order->get_meta('_patsacbr_lexware_invoice_id');
         if ($order->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
-            if ($existing && 'yes' !== $order->get_meta('_wlc_lexware_invoice_voided')) {
+            if ($existing && 'yes' !== $order->get_meta('_patsacbr_lexware_invoice_voided')) {
                 self::add_to_queue($order->get_id(), 'void_invoice');
             }
             $order->add_order_note(esc_html__('Lexware: Rechnungserstellung übersprungen, da die Bestellung bereits beendet/storniert ist.', 'patsch9-accounting-bridge'));
@@ -331,8 +331,8 @@ class WLC_Queue_Handler {
 
         // Historical orders may already have an invoice in Lexware from before
         // this plugin managed the order. Reconcile read-only before any remote POST.
-        if (class_exists('WLC_Invoice_Reconciler')) {
-            $reconciled = WLC_Invoice_Reconciler::get_instance()->reconcile_before_create($order, $api_client);
+        if (class_exists('PATSACBR_Invoice_Reconciler')) {
+            $reconciled = PATSACBR_Invoice_Reconciler::get_instance()->reconcile_before_create($order, $api_client);
             if (is_wp_error($reconciled)) {
                 return $reconciled;
             }
@@ -346,7 +346,7 @@ class WLC_Queue_Handler {
         }
 
         $contact_id = null;
-        if ('yes' === get_option('wlc_auto_sync_contacts', 'yes')) {
+        if ('yes' === get_option('patsacbr_auto_sync_contacts', 'yes')) {
             $contact_result = $api_client->sync_contact($order);
             if (is_wp_error($contact_result)) {
                 return $contact_result;
@@ -357,7 +357,7 @@ class WLC_Queue_Handler {
     }
 
     private function handle_void_invoice($order, $api_client) {
-        $invoice_id = sanitize_text_field((string)$order->get_meta('_wlc_lexware_invoice_id'));
+        $invoice_id = sanitize_text_field((string)$order->get_meta('_patsacbr_lexware_invoice_id'));
         if (!$invoice_id) {
             return new WP_Error('no_invoice', esc_html__('Keine Rechnung vorhanden', 'patsch9-accounting-bridge'));
         }
@@ -367,12 +367,12 @@ class WLC_Queue_Handler {
     private function handle_update_invoice($order, $api_client) {
         // If a previous attempt already credited the old invoice but failed while
         // creating the replacement, continue with creation instead of crediting again.
-        $pending_source = sanitize_text_field((string)$order->get_meta('_wlc_lexware_update_source_invoice_id'));
-        $current_invoice = sanitize_text_field((string)$order->get_meta('_wlc_lexware_invoice_id'));
+        $pending_source = sanitize_text_field((string)$order->get_meta('_patsacbr_lexware_update_source_invoice_id'));
+        $current_invoice = sanitize_text_field((string)$order->get_meta('_patsacbr_lexware_invoice_id'));
         if ($pending_source && !$current_invoice) {
             $created = $this->handle_create_invoice($order, $api_client);
             if (!is_wp_error($created)) {
-                $order->delete_meta_data('_wlc_lexware_update_source_invoice_id');
+                $order->delete_meta_data('_patsacbr_lexware_update_source_invoice_id');
                 $order->save();
             }
             return $created;
@@ -385,8 +385,8 @@ class WLC_Queue_Handler {
         if (is_wp_error($void)) {
             return $void;
         }
-        $credit_id = sanitize_text_field((string)$order->get_meta('_wlc_lexware_credit_note_id'));
-        $history = $order->get_meta('_wlc_lexware_credit_note_history');
+        $credit_id = sanitize_text_field((string)$order->get_meta('_patsacbr_lexware_credit_note_id'));
+        $history = $order->get_meta('_patsacbr_lexware_credit_note_history');
         $history = is_array($history) ? $history : array();
         if ($credit_id) {
             $history[] = array(
@@ -395,19 +395,19 @@ class WLC_Queue_Handler {
                 'created_at'     => current_time('mysql'),
             );
             $history = array_slice($history, -50);
-            $order->update_meta_data('_wlc_lexware_credit_note_history', $history);
+            $order->update_meta_data('_patsacbr_lexware_credit_note_history', $history);
         }
-        $order->update_meta_data('_wlc_lexware_update_source_invoice_id', $current_invoice);
-        $order->delete_meta_data('_wlc_lexware_invoice_id');
-        $order->delete_meta_data('_wlc_lexware_invoice_number');
-        $order->delete_meta_data('_wlc_lexware_invoice_voided');
-        $order->delete_meta_data('_wlc_lexware_credit_note_id');
-        $order->delete_meta_data('_wlc_lexware_credit_note_for_invoice_id');
+        $order->update_meta_data('_patsacbr_lexware_update_source_invoice_id', $current_invoice);
+        $order->delete_meta_data('_patsacbr_lexware_invoice_id');
+        $order->delete_meta_data('_patsacbr_lexware_invoice_number');
+        $order->delete_meta_data('_patsacbr_lexware_invoice_voided');
+        $order->delete_meta_data('_patsacbr_lexware_credit_note_id');
+        $order->delete_meta_data('_patsacbr_lexware_credit_note_for_invoice_id');
         $order->save();
 
         $created = $this->handle_create_invoice($order, $api_client);
         if (!is_wp_error($created)) {
-            $order->delete_meta_data('_wlc_lexware_update_source_invoice_id');
+            $order->delete_meta_data('_patsacbr_lexware_update_source_invoice_id');
             $order->save();
         }
         return $created;
@@ -418,8 +418,8 @@ class WLC_Queue_Handler {
             return false;
         }
         $emails = WC()->mailer()->get_emails();
-        if (isset($emails['WLC_Invoice_Email'])) {
-            $sent = $emails['WLC_Invoice_Email']->trigger($order->get_id(), $order);
+        if (isset($emails['PATSACBR_Invoice_Email'])) {
+            $sent = $emails['PATSACBR_Invoice_Email']->trigger($order->get_id(), $order);
             if ($sent) {
                 $order->add_order_note(esc_html__('Rechnung automatisch per E-Mail versendet', 'patsch9-accounting-bridge'));
                 return true;
@@ -433,7 +433,7 @@ class WLC_Queue_Handler {
         global $wpdb;
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $wpdb->update(
-            $wpdb->prefix . 'wlc_queue',
+            $wpdb->prefix . 'patsacbr_queue',
             array(
                 'status'             => 'completed',
                 'dedupe_key'         => null,
@@ -451,8 +451,8 @@ class WLC_Queue_Handler {
 
     private function mark_as_failed($item, $error_message, $retryable, $ambiguous = false) {
         global $wpdb;
-        $table = $wpdb->prefix . 'wlc_queue';
-        $max_attempts = max(1, min(10, absint(get_option('wlc_retry_attempts', 3))));
+        $table = $wpdb->prefix . 'patsacbr_queue';
+        $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
         $attempts = max(1, absint($item->attempts));
         $retry = !$ambiguous && $retryable && $attempts < $max_attempts;
         $manual_check = (bool) $ambiguous;
@@ -490,7 +490,7 @@ class WLC_Queue_Handler {
         if (!$item_id) {
             return false;
         }
-        $table = $wpdb->prefix . 'wlc_queue';
+        $table = $wpdb->prefix . 'patsacbr_queue';
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $updated = $wpdb->update(
             $table,
@@ -510,7 +510,7 @@ class WLC_Queue_Handler {
 
     public static function get_queue_status() {
         global $wpdb;
-        $table = $wpdb->prefix . 'wlc_queue';
+        $table = $wpdb->prefix . 'patsacbr_queue';
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         return $wpdb->get_results(
             $wpdb->prepare(
@@ -523,13 +523,13 @@ class WLC_Queue_Handler {
     public static function get_scheduler_status() {
         $status = array('type' => 'unknown', 'scheduled' => false, 'next_run' => null);
         if (function_exists('as_next_scheduled_action')) {
-            $next = as_next_scheduled_action('wlc_process_queue', array(), self::GROUP);
+            $next = as_next_scheduled_action('patsacbr_process_queue', array(), self::GROUP);
             if ($next) {
                 $status = array('type' => 'action_scheduler', 'scheduled' => true, 'next_run' => wp_date('Y-m-d H:i:s', $next));
             }
         }
         if (!$status['scheduled']) {
-            $next = wp_next_scheduled('wlc_process_queue');
+            $next = wp_next_scheduled('patsacbr_process_queue');
             if ($next) {
                 $status = array('type' => 'wp_cron', 'scheduled' => true, 'next_run' => wp_date('Y-m-d H:i:s', $next));
             }

@@ -6,21 +6,21 @@
 if (!defined('ABSPATH')) {
     exit;
 }
-class WLC_API_Client {
+class PATSACBR_API_Client {
     const API_BASE_URL = 'https://api.lexware.io/v1/';
     const RATE_LIMIT_REQUESTS = 2; // 2 requests pro Sekunde
     const RATE_LIMIT_WINDOW = 1; // 1 Sekunde
     const MAX_RETRIES = 3; // Exponential Backoff: max 3 Retries
     const VOUCHER_PREFIX = 'Wertgutschein'; // Germanized Wertgutschein Präfix
-    
+
     private $api_key;
     private $last_request_time = 0;
     private $request_times = array(); // Für Tracking der Requests im Zeitfenster
     public function __construct() {
-        $key = defined('LEXWARE_CONNECTOR_API_KEY') && is_scalar(LEXWARE_CONNECTOR_API_KEY)
-            ? trim((string) LEXWARE_CONNECTOR_API_KEY)
-            : (string) get_option('wlc_api_key', '');
-        $this->api_key = class_exists('WLC_Security') ? WLC_Security::sanitize_api_key($key) : sanitize_text_field($key);
+        $key = defined('PATSACBR_LEXWARE_API_KEY') && is_scalar(PATSACBR_LEXWARE_API_KEY)
+            ? trim((string) PATSACBR_LEXWARE_API_KEY)
+            : (string) get_option('patsacbr_api_key', '');
+        $this->api_key = class_exists('PATSACBR_Security') ? PATSACBR_Security::sanitize_api_key($key) : sanitize_text_field($key);
     }
     private function is_valid_uuid($value) {
         return is_string($value) && (bool) preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5a-f0-9][a-f0-9]{3}-[89ab0-9a-f][a-f0-9]{3}-[a-f0-9]{12}$/i', $value);
@@ -37,33 +37,33 @@ class WLC_API_Client {
      */
     private function enforce_rate_limit() {
         $now = microtime(true);
-        
+
         // Entferne alte Einträge außerhalb des Zeitfensters
         $this->request_times = array_filter($this->request_times, function($time) use ($now) {
             return ($now - $time) < self::RATE_LIMIT_WINDOW;
         });
-        
+
         // Wenn wir das Limit erreicht haben, warte
         if (count($this->request_times) >= self::RATE_LIMIT_REQUESTS) {
             // Warte auf den ältesten Request
             $oldest = min($this->request_times);
             $wait_time = self::RATE_LIMIT_WINDOW - ($now - $oldest) + 0.01; // 10ms Puffer
-            
+
             if ($wait_time > 0) {
                 usleep($wait_time * 1000000); // Convert to microseconds
                 $this->request_times = array(); // Reset nach Warten
             }
         }
-        
+
         // Tracke diesen Request
         $this->request_times[] = microtime(true);
     }
     /**
      * Prüft, ob ein Item ein Wertgutschein ist (Germanized Plugin)
-     * 
+     *
      * Wertgutscheine werden von Germanized mit einem Präfix gekennzeichnet.
      * Sie sind ohne MwSt. und werden erst bei Einlösung besteuert.
-     * 
+     *
      * @param WC_Order_Item $item Das Order Item
      * @return bool True wenn Wertgutschein, false sonst
      */
@@ -73,16 +73,16 @@ class WLC_API_Client {
     }
     /**
      * Extrahiert Wertgutschein-Informationen aus Order Items
-     * 
+     *
      * Germanized speichert Wertgutscheine als 'fee' Items mit negativem Betrag.
      * Wir sammeln alle Wertgutschein-Items und geben sie als Array zurück.
-     * 
+     *
      * @param WC_Order $order Die WooCommerce Bestellung
      * @return array Array mit Wertgutschein-Daten (amount, description)
      */
     private function get_voucher_items_from_order($order) {
         $vouchers = array();
-        
+
         // Suche in line_items
         foreach ($order->get_items() as $item) {
             if ($this->is_value_voucher_item($item)) {
@@ -93,7 +93,7 @@ class WLC_API_Client {
                 );
             }
         }
-        
+
         // Suche in fee items (wo Germanized Wertgutscheine oft gespeichert werden!)
         foreach ($order->get_items('fee') as $fee_item) {
             if ($this->is_value_voucher_item($fee_item)) {
@@ -103,7 +103,7 @@ class WLC_API_Client {
                 );
             }
         }
-        
+
         return $vouchers;
     }
     /**
@@ -208,7 +208,7 @@ class WLC_API_Client {
     }
 
     public function sync_contact($order) {
-        $existing_contact_id = sanitize_text_field((string) $order->get_meta('_wlc_lexware_contact_id'));
+        $existing_contact_id = sanitize_text_field((string) $order->get_meta('_patsacbr_lexware_contact_id'));
 
         // Bereits verknüpfte Kontakte nur verifizieren. Bestehende Lexware-Kontakte
         // werden bewusst nicht automatisch per PUT überschrieben: die API behandelt
@@ -238,7 +238,7 @@ class WLC_API_Client {
         }
         if ($existing_contact) {
             $contact_id = sanitize_text_field((string) $existing_contact['id']);
-            $order->update_meta_data('_wlc_lexware_contact_id', $contact_id);
+            $order->update_meta_data('_patsacbr_lexware_contact_id', $contact_id);
             $order->save();
             return $existing_contact;
         }
@@ -327,7 +327,7 @@ class WLC_API_Client {
         }
 
         $contact_id = sanitize_text_field((string) $result['id']);
-        $order->update_meta_data('_wlc_lexware_contact_id', $contact_id);
+        $order->update_meta_data('_patsacbr_lexware_contact_id', $contact_id);
         $order->save();
         return $result;
     }
@@ -339,12 +339,12 @@ class WLC_API_Client {
         if ('EUR' !== strtoupper((string) $order->get_currency())) {
             return new WP_Error('unsupported_currency', __('Lexware unterstützt über diese Schnittstelle aktuell nur EUR-Rechnungen.', 'patsch9-accounting-bridge'));
         }
-        $existing_invoice_id = $order->get_meta('_wlc_lexware_invoice_id');
+        $existing_invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
         if ($existing_invoice_id) {
             return array('id' => $existing_invoice_id);
         }
 
-        $finalize   = get_option('wlc_finalize_immediately', 'yes') === 'yes';
+        $finalize   = get_option('patsacbr_finalize_immediately', 'yes') === 'yes';
         $order_date = $order->get_date_created();
         if (!$order_date) {
             return new WP_Error('missing_order_date', __('Bestelldatum fehlt.', 'patsch9-accounting-bridge'));
@@ -375,9 +375,9 @@ class WLC_API_Client {
             'totalPrice'         => array('currency' => 'EUR'),
             'taxConditions'      => array('taxType' => $tax_type),
             'shippingConditions' => array('shippingType' => 'none'),
-            'title'              => $this->replace_shortcodes(get_option('wlc_invoice_title', 'Rechnung'), $order),
-            'introduction'       => $this->replace_shortcodes(get_option('wlc_invoice_introduction', 'Vielen Dank für Ihre Bestellung.'), $order),
-            'remark'             => $this->replace_shortcodes(get_option('wlc_closing_text', 'Vielen Dank für Ihr Vertrauen.'), $order),
+            'title'              => $this->replace_shortcodes(get_option('patsacbr_invoice_title', 'Rechnung'), $order),
+            'introduction'       => $this->replace_shortcodes(get_option('patsacbr_invoice_introduction', 'Vielen Dank für Ihre Bestellung.'), $order),
+            'remark'             => $this->replace_shortcodes(get_option('patsacbr_closing_text', 'Vielen Dank für Ihr Vertrauen.'), $order),
             'paymentConditions'  => array(
                 'paymentTermLabel'    => $this->replace_shortcodes($this->get_payment_terms_for_order($order), $order),
                 'paymentTermDuration' => max(0, min(3650, (int) $this->get_payment_due_days_for_order($order))),
@@ -402,8 +402,8 @@ class WLC_API_Client {
         // Persist the remote ID before any follow-up request. If PHP is terminated
         // during voucher-number polling, later processing can still recognize the
         // already-created Lexware invoice and will not create a duplicate.
-        $order->update_meta_data('_wlc_lexware_invoice_id', $invoice_id);
-        $order->update_meta_data('_wlc_lexware_invoice_number', '');
+        $order->update_meta_data('_patsacbr_lexware_invoice_id', $invoice_id);
+        $order->update_meta_data('_patsacbr_lexware_invoice_number', '');
         $order->save();
 
         $invoice_number = '';
@@ -420,7 +420,7 @@ class WLC_API_Client {
             }
         }
         if ($invoice_number) {
-            $order->update_meta_data('_wlc_lexware_invoice_number', $invoice_number);
+            $order->update_meta_data('_patsacbr_lexware_invoice_number', $invoice_number);
             $order->save();
         }
         $order->add_order_note(sprintf(
@@ -554,9 +554,9 @@ class WLC_API_Client {
         // An existing credit note is reusable only if it belongs to this exact
         // invoice. This prevents a second invoice correction from reusing the
         // credit note that belonged to an older invoice revision.
-        $existing = sanitize_text_field((string) $order->get_meta('_wlc_lexware_credit_note_id'));
-        $existing_for = sanitize_text_field((string) $order->get_meta('_wlc_lexware_credit_note_for_invoice_id'));
-        if ($existing && ($existing_for === $original_invoice_id || (!$existing_for && 'yes' === $order->get_meta('_wlc_lexware_invoice_voided')))) {
+        $existing = sanitize_text_field((string) $order->get_meta('_patsacbr_lexware_credit_note_id'));
+        $existing_for = sanitize_text_field((string) $order->get_meta('_patsacbr_lexware_credit_note_for_invoice_id'));
+        if ($existing && ($existing_for === $original_invoice_id || (!$existing_for && 'yes' === $order->get_meta('_patsacbr_lexware_invoice_voided')))) {
             return array('id' => $existing);
         }
 
@@ -646,9 +646,9 @@ class WLC_API_Client {
 
         // Same idempotency principle as invoices: persist the remote credit-note
         // relation before optional voucher-number polling.
-        $order->update_meta_data('_wlc_lexware_credit_note_id', $credit_note_id);
-        $order->update_meta_data('_wlc_lexware_credit_note_for_invoice_id', $original_invoice_id);
-        $order->update_meta_data('_wlc_lexware_invoice_voided', 'yes');
+        $order->update_meta_data('_patsacbr_lexware_credit_note_id', $credit_note_id);
+        $order->update_meta_data('_patsacbr_lexware_credit_note_for_invoice_id', $original_invoice_id);
+        $order->update_meta_data('_patsacbr_lexware_invoice_voided', 'yes');
         $order->save();
 
         $credit_note_number = '';
@@ -720,7 +720,7 @@ class WLC_API_Client {
             $mime = 'application/pdf';
         }
 
-        $tmp = wp_tempnam('wlc-invoice.' . $extension);
+        $tmp = wp_tempnam('patsacbr-invoice.' . $extension);
         if (!$tmp) {
             return new WP_Error('temp_file', __('Temporäre Rechnungsdatei konnte nicht angelegt werden.', 'patsch9-accounting-bridge'));
         }
@@ -755,14 +755,14 @@ class WLC_API_Client {
     }
     private function format_address($order) {
         $company = $order->get_billing_company();
-        
+
         $address = array(
             'street' => $order->get_billing_address_1(),
             'zip' => $order->get_billing_postcode(),
             'city' => $order->get_billing_city(),
             'countryCode' => $order->get_billing_country()
         );
-        
+
         // Bei Firmenadressen: Firma als Hauptname, Person als Supplement
         if (!empty($company)) {
             $address['name'] = $company;
@@ -771,7 +771,7 @@ class WLC_API_Client {
             // Bei Privatpersonen: Nur der Name
             $address['name'] = $order->get_formatted_billing_full_name();
         }
-        
+
         // Adresszusatz (falls vorhanden)
         if ($order->get_billing_address_2()) {
             // Falls bereits supplement durch Firma gesetzt, anhängen
@@ -781,24 +781,24 @@ class WLC_API_Client {
                 $address['supplement'] = $order->get_billing_address_2();
             }
         }
-        
+
         return $address;
     }
     /**
      * Berechnet den Gesamtrabatt (alle Gutscheine/Coupons zusammen, OHNE Wertgutscheine)
      * Wertgutscheine werden als separate Line Items behandelt
-     * 
+     *
      * @param WC_Order $order Die WooCommerce Bestellung
      * @return float Der Rabattbetrag (ohne Wertgutscheine)
      */
     private function get_total_discount($order) {
         $total_discount = 0.0;
         $coupon_codes = $order->get_coupon_codes();
-        
+
         if (empty($coupon_codes)) {
             return $total_discount;
         }
-        
+
         foreach ($coupon_codes as $coupon_code) {
             foreach ($order->get_items('coupon') as $coupon_item) {
                 if ($coupon_item->get_code() === $coupon_code) {
@@ -807,7 +807,7 @@ class WLC_API_Client {
                 }
             }
         }
-        
+
         return round($total_discount, 2);
     }
     /**
@@ -820,26 +820,26 @@ class WLC_API_Client {
             'gross' => 0.0,
             'tax' => 0.0
         );
-        
+
         // Artikel (OHNE Wertgutscheine und Fee Items)
         foreach ($order->get_items() as $item) {
             // Überspringe Wertgutschein-Items
             if ($this->is_value_voucher_item($item)) {
                 continue;
             }
-            
+
             // get_item_subtotal() returns the price per unit. The Lexware
             // line uses quantity separately, so the invoice subtotal must
             // multiply the per-unit subtotal by the WooCommerce quantity.
             $quantity = max(1, (float)$item->get_quantity());
             $net = round($order->get_item_subtotal($item, false) * $quantity, 2);
             $gross = round($order->get_item_subtotal($item, true) * $quantity, 2);
-            
+
             $subtotal['net'] += $net * $multiplier;
             $subtotal['gross'] += $gross * $multiplier;
             $subtotal['tax'] += ($gross - $net) * $multiplier;
         }
-        
+
         // Normale WooCommerce-Gebühren (z. B. Lieferung oder Mietkaution).
         // Wertgutscheine bleiben ausgeschlossen, weil sie separat verarbeitet werden.
         foreach ($order->get_items('fee') as $fee_item) {
@@ -855,15 +855,15 @@ class WLC_API_Client {
         }
 
         // Versand
-        if (get_option('wlc_shipping_as_line_item', 'yes') === 'yes') {
+        if (get_option('patsacbr_shipping_as_line_item', 'yes') === 'yes') {
             $shipping_gross = round($order->get_shipping_total() + $order->get_shipping_tax(), 2);
             $shipping_net = round($order->get_shipping_total(), 2);
-            
+
             $subtotal['net'] += $shipping_net * $multiplier;
             $subtotal['gross'] += $shipping_gross * $multiplier;
             $subtotal['tax'] += $order->get_shipping_tax() * $multiplier;
         }
-        
+
         return $subtotal;
     }
     private function format_line_items($order, $negative = false, $tax_type = 'net') {
@@ -945,7 +945,7 @@ class WLC_API_Client {
             );
         }
 
-        if ('yes' === get_option('wlc_shipping_as_line_item', 'yes') && ((float) $order->get_shipping_total() != 0.0 || (float) $order->get_shipping_tax() != 0.0)) {
+        if ('yes' === get_option('patsacbr_shipping_as_line_item', 'yes') && ((float) $order->get_shipping_total() != 0.0 || (float) $order->get_shipping_tax() != 0.0)) {
             $shipping_net = (float) $order->get_shipping_total();
             $shipping_gross = $shipping_net + (float) $order->get_shipping_tax();
             $unit_price = array('currency' => 'EUR', 'taxRatePercentage' => $this->calculate_shipping_tax_rate($order));
@@ -958,7 +958,7 @@ class WLC_API_Client {
                 'unitPrice' => $unit_price,
             );
         }
-        return apply_filters('wlc_formatted_line_items', $line_items, $order, false);
+        return apply_filters('patsacbr_formatted_line_items', $line_items, $order, false);
     }
 
     private function format_voucher_redemptions($order, $tax_type) {
@@ -1031,10 +1031,10 @@ class WLC_API_Client {
     }
     private function get_payment_terms_for_order($order) {
         $payment_method = $order->get_payment_method();
-        $specific_terms = get_option('wlc_payment_terms_' . $payment_method, '');
+        $specific_terms = get_option('patsacbr_payment_terms_' . $payment_method, '');
         $terms = !empty($specific_terms)
             ? (string) $specific_terms
-            : (string) get_option('wlc_payment_terms', __('Zahlbar innerhalb von 14 Tagen ohne Abzug.', 'patsch9-accounting-bridge'));
+            : (string) get_option('patsacbr_payment_terms', __('Zahlbar innerhalb von 14 Tagen ohne Abzug.', 'patsch9-accounting-bridge'));
 
         // Optional extension metadata. No dependency on the rental plugin:
         // normal WooCommerce orders simply do not have this value.
@@ -1053,7 +1053,7 @@ class WLC_API_Client {
          * Optional integration point for rental/accounting extensions.
          * Standalone WooCommerce orders remain unchanged.
          */
-        $addition = apply_filters('wlc_payment_terms_addition', $addition, $order);
+        $addition = apply_filters('patsacbr_payment_terms_addition', $addition, $order);
         $addition = sanitize_textarea_field((string) $addition);
 
         if ('' !== trim($addition)) {
@@ -1067,18 +1067,18 @@ class WLC_API_Client {
     }
     private function get_payment_due_days_for_order($order) {
         $payment_method = $order->get_payment_method();
-        $specific_days = get_option('wlc_payment_due_days_' . $payment_method, '');
+        $specific_days = get_option('patsacbr_payment_due_days_' . $payment_method, '');
         if ($specific_days !== '' && $specific_days !== false) {
             return (int) $specific_days;
         }
-        return (int) get_option('wlc_payment_due_days', 14);
+        return (int) get_option('patsacbr_payment_due_days', 14);
     }
     public function replace_shortcodes($text, $order) {
         if (!$order) return $text;
-        
+
         // Formatiere Preis ohne HTML
         $total_formatted = number_format_i18n($order->get_total(), 2) . ' ' . $order->get_currency();
-        
+
         $replace = array(
             '[order_number]'     => $order->get_order_number(),
             '[order_date]'       => date_i18n(get_option('date_format'), strtotime($order->get_date_created())),
@@ -1087,7 +1087,7 @@ class WLC_API_Client {
             '[total]'            => $total_formatted,
             '[payment_method]'   => $order->get_payment_method_title(),
         );
-        
+
         return strtr($text, $replace);
     }
     /**
@@ -1158,8 +1158,8 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
     }
 
     $order_total = round((float) $order->get_total(), 2);
-    $before_days = max(0, min(31, absint(apply_filters('wlc_reconciliation_days_before_order', 7, $order))));
-    $after_days = max(1, min(730, absint(apply_filters('wlc_reconciliation_days_after_order', 180, $order))));
+    $before_days = max(0, min(31, absint(apply_filters('patsacbr_reconciliation_days_before_order', 7, $order))));
+    $after_days = max(1, min(730, absint(apply_filters('patsacbr_reconciliation_days_after_order', 180, $order))));
     $from_ts = $created->getTimestamp() - ($before_days * DAY_IN_SECONDS);
     $to_ts = $created->getTimestamp() + ($after_days * DAY_IN_SECONDS);
     if ($cutoff_timestamp > 0) {
@@ -1311,7 +1311,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
                     $transport_message .= ' ' . __('Der Schreibvorgang wird nicht automatisch wiederholt, weil er serverseitig bereits erfolgt sein könnte. Bitte in Lexware prüfen.', 'patsch9-accounting-bridge');
                 }
                 return new WP_Error(
-                    'wlc_api_transport',
+                    'patsacbr_api_transport',
                     $transport_message,
                     array('retryable' => $retryable, 'ambiguous_write' => ('POST' === $method))
                 );
@@ -1329,7 +1329,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
 
         $status = (int) wp_remote_retrieve_response_code($response);
         $body   = (string) wp_remote_retrieve_body($response);
-        if ('yes' === get_option('wlc_enable_logging', 'no')) {
+        if ('yes' === get_option('patsacbr_enable_logging', 'no')) {
             $this->log_request($method, $endpoint, $data, $status, $body);
         }
         if ($status < 200 || $status >= 300) {
@@ -1349,7 +1349,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
                 $message .= ' ' . __('Der Schreibvorgang wird nicht automatisch wiederholt, weil Lexware ihn trotz Fehler bereits verarbeitet haben könnte. Bitte vor erneutem Senden in Lexware prüfen.', 'patsch9-accounting-bridge');
             }
             $this->log_error('API Error', $message, array('status' => $status, 'endpoint' => $endpoint, 'method' => $method));
-            return new WP_Error('wlc_api_http', $message, array('status' => $status, 'retryable' => $retryable, 'ambiguous_write' => ('POST' === $method && $status >= 500)));
+            return new WP_Error('patsacbr_api_http', $message, array('status' => $status, 'retryable' => $retryable, 'ambiguous_write' => ('POST' === $method && $status >= 500)));
         }
         if ($raw_response) {
             return $body;
@@ -1357,7 +1357,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
         if ('' === $body) {
             if ('POST' === $method) {
                 return new WP_Error(
-                    'wlc_api_ambiguous_response',
+                    'patsacbr_api_ambiguous_response',
                     __('Lexware hat den Schreibvorgang mit Erfolg bestätigt, aber keinen auswertbaren Antwortkörper geliefert. Der Datensatz könnte bereits erstellt worden sein; bitte vor einem erneuten Versuch in Lexware prüfen.', 'patsch9-accounting-bridge'),
                     array('status' => $status, 'retryable' => false, 'ambiguous_write' => true)
                 );
@@ -1412,10 +1412,10 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             'status_code' => $status,
             'response' => ($status >= 400 ? '[error response body omitted to protect personal data]' : '[successful response omitted]')
         );
-        $logs = get_option('wlc_api_logs', array());
+        $logs = get_option('patsacbr_api_logs', array());
         array_unshift($logs, $log_entry);
         $logs = array_slice($logs, 0, 100);
-        update_option('wlc_api_logs', $logs);
+        update_option('patsacbr_api_logs', $logs);
     }
     private function log_error($title, $message, $context = array()) {
         $context = $this->redact_log_data($context);
@@ -1425,11 +1425,11 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             'message' => $this->redact_log_string($message),
             'context' => $context
         );
-        $errors = get_option('wlc_error_logs', array());
+        $errors = get_option('patsacbr_error_logs', array());
         array_unshift($errors, $error_entry);
         $errors = array_slice($errors, 0, 50);
-        update_option('wlc_error_logs', $errors);
-        if (get_option('wlc_email_on_error', 'yes') === 'yes') {
+        update_option('patsacbr_error_logs', $errors);
+        if (get_option('patsacbr_email_on_error', 'yes') === 'yes') {
             $admin_email = get_option('admin_email');
             if (is_email($admin_email)) {
                 wp_mail($admin_email,'[Patsch9 Accounting Bridge] Fehler',sprintf("Fehler: %s\n\nNachricht: %s\n\nZeit: %s", $this->redact_log_string($title), $this->redact_log_string($message), current_time('mysql')));

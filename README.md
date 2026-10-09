@@ -1,6 +1,6 @@
 # Patsch9 Accounting Bridge for WooCommerce
 
-Entwicklungsstand: **2026.10.2**
+Entwicklungsstand: **2026.10.3**
 
 Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public API und unterstützt die Erstellung und Verwaltung von Rechnungen und Gutschriften aus WooCommerce-Bestellungen.
 
@@ -22,7 +22,7 @@ Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public AP
 
 ## Voraussetzungen
 
-- WordPress **6.9.5 oder neuer**.
+- WordPress **6.9 oder neuer**.
 - PHP **8.2 oder neuer**.
 - WooCommerce **10.9.4 oder neuer**.
 - Lexware Office Konto mit freigeschaltetem Public-API-Zugang.
@@ -44,7 +44,7 @@ Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public AP
 Die Einstellungen befinden sich im WooCommerce-Administrationsbereich des Plugins. Für höhere Sicherheit kann der Lexware API-Key statt in der WordPress-Datenbank in `wp-config.php` hinterlegt werden:
 
 ```php
-define( 'LEXWARE_CONNECTOR_API_KEY', 'DEIN_API_KEY' );
+define( 'PATSACBR_LEXWARE_API_KEY', 'DEIN_API_KEY' );
 ```
 
 Die Konstante hat Vorrang vor einem in WordPress gespeicherten Schlüssel.
@@ -89,7 +89,7 @@ Der Website-Betreiber ist für die korrekte Datenschutzinformation und die Einha
 - WooCommerce HPOS (`custom_order_tables`) wird deklariert.
 - WooCommerce-Bestelldaten werden über die WooCommerce-CRUD-API verarbeitet.
 - Action Scheduler wird verwendet, wenn er verfügbar ist; WP-Cron dient als Fallback.
-- Bestehende interne Schlüssel wie `WLC_*`, `wlc_*` und vorhandene Queue-/Meta-Daten bleiben aus Gründen der Abwärtskompatibilität bestehen.
+- Seit 2026.10.3 verwenden aktive Plugin-Deklarationen, Hooks und gespeicherte Daten den eindeutigen Präfix `PATSACBR_` / `patsacbr_`. Daten aus Vorabversionen werden beim Upgrade kompatibel migriert.
 
 ## Versionsschema
 

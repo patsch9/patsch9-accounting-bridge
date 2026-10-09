@@ -15,7 +15,7 @@ Die letzte interne Vorabversion dieser Plugin-Linie war `1.3.6`. `2026.10.0` ver
 5. In einem Lexware-Testkonto oder Staging-System einen Testkontakt und einen Testbeleg erzeugen.
 6. Rechnungsdownload, E-Mail-Integration sowie Queue-/Fehlerbehandlung prüfen.
 
-Die interne Datenbankschema-Version ist ab `2026.10.0` ausdrücklich von der öffentlichen Plugin-Version getrennt. Vorhandene `WLC_*`-/`wlc_*`-Bezeichner, Queue-Daten und WooCommerce-Metadaten bleiben aus Gründen der Abwärtskompatibilität bestehen.
+Die interne Datenbankschema-Version ist von der öffentlichen Plugin-Version getrennt. Seit `2026.10.3` verwenden aktive Deklarationen, Hooks und gespeicherte Daten `PATSACBR_` / `patsacbr_`. Daten aus den internen Vorabversionen werden beim Upgrade kompatibel übernommen; der frühere dreistellige Präfix wird ausschließlich für diese Migration gelesen.
 
 ## Von älteren öffentlichen Namen/Ordnern
 

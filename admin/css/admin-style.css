@@ -1,11 +1,16 @@
-.wlc-settings-wrap {
+.patsacbr-settings-wrap {
     max-width: 1200px;
 }
 
-.wlc-settings-wrap .form-table th {
+.patsacbr-settings-wrap .form-table th {
     width: 250px;
 }
 
-.wlc-settings-wrap .nav-tab-wrapper {
+.patsacbr-settings-wrap .nav-tab-wrapper {
     margin-bottom: 20px;
 }
+
+.patsacbr-metabox p { margin: 10px 0; }
+.patsacbr-metabox code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 11px; word-break: break-all; }
+.patsacbr-metabox .button { width: 100%; text-align: center; box-sizing: border-box; }
+.patsacbr-manual-invoice-fields input.widefat { width: 100%; box-sizing: border-box; }

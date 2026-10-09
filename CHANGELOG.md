@@ -6,6 +6,14 @@ Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONI
 
 Keine Änderungen.
 
+## 2026.10.3 – Noch nicht veröffentlicht
+
+- WordPress.org-Review: Admin-JavaScript und CSS über WordPress-Enqueue-APIs eingebunden.
+- Eindeutiger `PATSACBR_`/`patsacbr_`-Präfix für globale Deklarationen, Hooks und gespeicherte Plugin-Daten.
+- Kompatibilitätsmigration für Einstellungen, Queue und WooCommerce-Bestellmetadaten aus Vorabständen.
+- Admin-Hinweise auf relevante Plugin-/WooCommerce-Seiten begrenzt.
+- WordPress.org-Mindestversionsangabe auf `6.9` normalisiert.
+
 ## 2026.10.2 – Noch nicht veröffentlicht
 
 - Manueller Start und Neustart des historischen Lexware-Rechnungsabgleichs in der Accounting-Bridge-Administration.
