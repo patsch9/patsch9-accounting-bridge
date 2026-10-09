@@ -69,7 +69,25 @@ final class PATSACBR_Legacy_Migration {
         return '_wl' . 'c_';
     }
 
+    /**
+     * Preserve installations that stored the API key in wp-config.php under
+     * the pre-directory constant name, while exposing only the new prefixed
+     * constant to the active plugin code.
+     */
+    private static function register_legacy_api_key_constant() {
+        $legacy_constant = 'LEXWARE' . '_CONNECTOR_API_KEY';
+        if (defined('PATSACBR_LEXWARE_API_KEY') || !defined($legacy_constant)) {
+            return;
+        }
+
+        $legacy_value = constant($legacy_constant);
+        if (is_scalar($legacy_value)) {
+            define('PATSACBR_LEXWARE_API_KEY', (string) $legacy_value);
+        }
+    }
+
     public static function run() {
+        self::register_legacy_api_key_constant();
         self::register_order_meta_fallbacks();
 
         if (self::VERSION === (string) get_option('patsacbr_prefix_migration_version', '')) {
