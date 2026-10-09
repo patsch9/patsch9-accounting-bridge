@@ -105,16 +105,7 @@ final class PATSACBR_Legacy_Migration {
             'woocommerce_patsacbr_invoice_settings'
         );
 
-        if (function_exists('WC') && WC() && WC()->payment_gateways()) {
-            foreach (WC()->payment_gateways->payment_gateways() as $gateway) {
-                if (!is_object($gateway) || empty($gateway->id)) {
-                    continue;
-                }
-                $gateway_id = sanitize_key((string) $gateway->id);
-                self::migrate_option(self::legacy_prefix() . 'payment_terms_' . $gateway_id, 'patsacbr_payment_terms_' . $gateway_id);
-                self::migrate_option(self::legacy_prefix() . 'payment_due_days_' . $gateway_id, 'patsacbr_payment_due_days_' . $gateway_id);
-            }
-        }
+        self::migrate_dynamic_payment_options();
 
         self::cleanup_legacy_schedules();
         update_option('patsacbr_prefix_migration_version', self::VERSION, false);
@@ -133,6 +124,45 @@ final class PATSACBR_Legacy_Migration {
 
         update_option($new_key, $legacy_value, false);
         delete_option($legacy_key);
+    }
+
+    /**
+     * Migrate gateway-specific options without instantiating WooCommerce payment
+     * gateways. Instantiating them during plugin activation can trigger WooCommerce
+     * translations before WordPress reaches init.
+     */
+    private static function migrate_dynamic_payment_options() {
+        global $wpdb;
+
+        $legacy_prefix = self::legacy_prefix();
+        foreach (array('payment_terms_', 'payment_due_days_') as $setting_prefix) {
+            $expected_prefix = $legacy_prefix . $setting_prefix;
+            $like = $wpdb->esc_like($expected_prefix) . '%';
+
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time migration must discover dynamically named legacy plugin options without initializing WooCommerce gateways during activation.
+            $option_names = $wpdb->get_col($wpdb->prepare(
+                'SELECT option_name FROM %i WHERE option_name LIKE %s',
+                $wpdb->options,
+                $like
+            ));
+
+            foreach ($option_names as $legacy_key) {
+                $legacy_key = (string) $legacy_key;
+                if (0 !== strpos($legacy_key, $expected_prefix)) {
+                    continue;
+                }
+
+                $gateway_id = substr($legacy_key, strlen($expected_prefix));
+                if ('' === $gateway_id || sanitize_key($gateway_id) !== $gateway_id) {
+                    continue;
+                }
+
+                self::migrate_option(
+                    $legacy_key,
+                    'patsacbr_' . $setting_prefix . $gateway_id
+                );
+            }
+        }
     }
 
     private static function register_order_meta_fallbacks() {
