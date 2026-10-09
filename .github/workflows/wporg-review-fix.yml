@@ -30,6 +30,20 @@ jobs:
           cd repo
           python3 .github/scripts/wporg_review_fix.py
           rm -f .github/scripts/wporg_review_fix.py .github/workflows/wporg-review-fix.yml
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or '.git' in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              cleaned = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
+              if cleaned != text:
+                  path.write_text(cleaned, encoding='utf-8')
+          PY
 
       - name: Commit fixes
         env:
