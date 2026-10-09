@@ -28,8 +28,10 @@ jobs:
         run: |
           set -euo pipefail
           cd repo
+          cp .github/workflows/release.yml /tmp/patsacbr-release.yml
           python3 .github/scripts/wporg_review_fix.py
-          rm -f .github/scripts/wporg_review_fix.py .github/workflows/wporg-review-fix.yml
+          cp /tmp/patsacbr-release.yml .github/workflows/release.yml
+          rm -f .github/scripts/wporg_review_fix.py
           python3 - <<'PY'
           from pathlib import Path
           import re
