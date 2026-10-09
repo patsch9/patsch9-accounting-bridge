@@ -107,7 +107,7 @@ class PATSACBR_Invoice_Email extends WC_Email {
             $attachments[] = $this->pdf_path;
         }
 
-        return apply_filters('woocommerce_email_attachments', $attachments, $this->id, $this->object, $this);
+        return apply_filters('woocommerce_email_attachments', $attachments, $this->id, $this->object, $this); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core email hook.
     }
 
     public function get_content_html() {
