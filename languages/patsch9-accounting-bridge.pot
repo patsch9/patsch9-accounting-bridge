@@ -1,21 +1,1230 @@
-# Translation template for Patsch9 Accounting Bridge for WooCommerce
-# Created on 2025-11-12
-#
-# Place all .po and .mo files for translations in this folder.
-#
-# This .pot file includes sample entries and WordPress translators comments.
-#
+# Copyright (C) 2026 Patrick Schmidt
+# This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Patsch9 Accounting Bridge 2026.10.0
-"
-"Report-Msgid-Bugs-To: https://github.com/patsch9/patsch9-accounting-bridge/issues\n"
-"POT-Creation-Date: 2025-11-12 12:26+0000\n"
+"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.10.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/patsch9-accounting-bridge\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language-Team: German\n"
+"POT-Creation-Date: 2026-10-11T12:50:33+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: patsch9-accounting-bridge\n"
 
-#, translators: %s: Vorname des Kunden
-msgid "Hallo %s,"
+#. Plugin Name of the plugin
+#: patsch9-accounting-bridge.php
+msgid "Patsch9 Accounting Bridge for WooCommerce"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: patsch9-accounting-bridge.php
+msgid "https://github.com/patsch9/patsch9-accounting-bridge"
+msgstr ""
+
+#. Description of the plugin
+#: patsch9-accounting-bridge.php
+msgid "Automatic Lexware Office invoices from WooCommerce orders with synchronization and customer account integration."
+msgstr ""
+
+#. Author of the plugin
+#: patsch9-accounting-bridge.php
+msgid "Patrick Schmidt"
+msgstr ""
+
+#. Author URI of the plugin
+#: patsch9-accounting-bridge.php
+msgid "https://github.com/patsch9"
+msgstr ""
+
+#: includes/class-admin-settings.php:45
+#: includes/class-admin-settings.php:46
+msgid "Accounting Bridge"
+msgstr ""
+
+#: includes/class-admin-settings.php:67
+msgid "The Lexware API key has an invalid format. The previous key has been retained."
+msgstr ""
+
+#: includes/class-admin-settings.php:216
+msgid "Settings saved"
+msgstr ""
+
+#: includes/class-admin-settings.php:227
+#: patsch9-accounting-bridge.php:371
+#: patsch9-accounting-bridge.php:384
+msgid "Patsch9 Accounting Bridge"
+msgstr ""
+
+#: includes/class-admin-settings.php:230
+msgid "API configuration"
+msgstr ""
+
+#: includes/class-admin-settings.php:233
+msgid "Invoice settings"
+msgstr ""
+
+#: includes/class-admin-settings.php:236
+msgid "Synchronization"
+msgstr ""
+
+#: includes/class-admin-settings.php:239
+msgid "Logs & Queue"
+msgstr ""
+
+#: includes/class-admin-settings.php:283
+msgid "Lexware API Key"
+msgstr ""
+
+#: includes/class-admin-settings.php:287
+msgid "The API key is provided through wp-config.php."
+msgstr ""
+
+#: includes/class-admin-settings.php:288
+msgid "The key is therefore not stored in the WordPress database and cannot be changed here."
+msgstr ""
+
+#: includes/class-admin-settings.php:296
+msgid "Saved – leave blank to keep the current value"
+msgstr ""
+
+#: includes/class-admin-settings.php:296
+msgid "Enter API key"
+msgstr ""
+
+#: includes/class-admin-settings.php:303
+msgid "Show/hide API key"
+msgstr ""
+
+#: includes/class-admin-settings.php:308
+msgid "An API key is saved. Enter a new key to replace it, or leave blank to keep it."
+msgstr ""
+
+#: includes/class-admin-settings.php:308
+msgid "Please save an API key."
+msgstr ""
+
+#: includes/class-admin-settings.php:309
+msgid " For improved security, set PATSACBR_LEXWARE_API_KEY in wp-config.php."
+msgstr ""
+
+#: includes/class-admin-settings.php:314
+msgid "Create an API key in Lexware"
+msgstr ""
+
+#: includes/class-admin-settings.php:321
+msgid "Create invoices for order statuses"
+msgstr ""
+
+#: includes/class-admin-settings.php:345
+msgid "Retry attempts"
+msgstr ""
+
+#: includes/class-admin-settings.php:352
+msgid "Number of automatic retry attempts after API errors"
+msgstr ""
+
+#: includes/class-admin-settings.php:365
+msgid "Invoice title"
+msgstr ""
+
+#: includes/class-admin-settings.php:369
+#: includes/class-customer-area.php:50
+#: includes/class-customer-area.php:69
+#: includes/class-customer-area.php:82
+#: includes/class-lexware-api-client.php:378
+#: patsch9-accounting-bridge.php:327
+msgid "Invoice"
+msgstr ""
+
+#: includes/class-admin-settings.php:371
+#: includes/class-admin-settings.php:381
+msgid "Placeholders:"
+msgstr ""
+
+#: includes/class-admin-settings.php:376
+msgid "Introduction"
+msgstr ""
+
+#: includes/class-admin-settings.php:380
+#: patsch9-accounting-bridge.php:328
+msgid "Thank you for your order [order_number] dated [order_date]."
+msgstr ""
+
+#: includes/class-admin-settings.php:386
+msgid "Default payment terms"
+msgstr ""
+
+#: includes/class-admin-settings.php:390
+#: includes/class-lexware-api-client.php:1037
+#: patsch9-accounting-bridge.php:329
+msgid "Payable within 14 days without deduction."
+msgstr ""
+
+#: includes/class-admin-settings.php:395
+msgid "Default payment due date (days)"
+msgstr ""
+
+#: includes/class-admin-settings.php:405
+msgid "Closing text"
+msgstr ""
+
+#: includes/class-admin-settings.php:409
+#: includes/class-lexware-api-client.php:380
+#: patsch9-accounting-bridge.php:331
+msgid "Thank you for your trust."
+msgstr ""
+
+#: includes/class-admin-settings.php:414
+msgid "Finalize invoices immediately"
+msgstr ""
+
+#: includes/class-admin-settings.php:420
+msgid "Yes, create invoices directly with the \"open\" status"
+msgstr ""
+
+#: includes/class-admin-settings.php:442
+msgid "Payment method settings"
+msgstr ""
+
+#: includes/class-admin-settings.php:444
+msgid "Configure individual payment terms for each payment method. Leave blank to use the default settings."
+msgstr ""
+
+#: includes/class-admin-settings.php:449
+msgid "Payment method"
+msgstr ""
+
+#: includes/class-admin-settings.php:450
+msgid "Payment terms"
+msgstr ""
+
+#: includes/class-admin-settings.php:451
+msgid "Payment due date (days)"
+msgstr ""
+
+#: includes/class-admin-settings.php:473
+msgid "Use default"
+msgstr ""
+
+#: includes/class-admin-settings.php:488
+msgid "Examples:"
+msgstr ""
+
+#: includes/class-admin-settings.php:488
+msgid "PayPal: \"Already paid via PayPal\" + 0 days | Invoice: \"Payable within 14 days\" + 14 days"
+msgstr ""
+
+#: includes/class-admin-settings.php:498
+msgid "Synchronize contacts automatically"
+msgstr ""
+
+#: includes/class-admin-settings.php:504
+msgid "Yes, create/update customer data in Lexware automatically"
+msgstr ""
+
+#: includes/class-admin-settings.php:510
+msgid "Show invoices in the customer account"
+msgstr ""
+
+#: includes/class-admin-settings.php:516
+msgid "Yes, show invoice PDFs in the \"My Account\" area"
+msgstr ""
+
+#: includes/class-admin-settings.php:522
+msgid "Shipping costs as a line item"
+msgstr ""
+
+#: includes/class-admin-settings.php:528
+msgid "Yes, transfer shipping costs as a separate invoice line item"
+msgstr ""
+
+#: includes/class-admin-settings.php:534
+msgid "Enable logging"
+msgstr ""
+
+#: includes/class-admin-settings.php:540
+msgid "Yes, log API requests and errors"
+msgstr ""
+
+#: includes/class-admin-settings.php:546
+msgid "Email on errors"
+msgstr ""
+
+#: includes/class-admin-settings.php:552
+msgid "Yes, notify the administrator of errors by email"
+msgstr ""
+
+#: includes/class-admin-settings.php:558
+msgid "Email invoices automatically"
+msgstr ""
+
+#: includes/class-admin-settings.php:564
+msgid "Yes, email invoices to customers automatically after creation"
+msgstr ""
+
+#: includes/class-admin-settings.php:567
+msgid "The email template can be customized under WooCommerce → Settings → Emails."
+msgstr ""
+
+#: includes/class-admin-settings.php:573
+msgid "Delete data on uninstall"
+msgstr ""
+
+#: includes/class-admin-settings.php:580
+msgid "Yes, permanently remove plugin settings, queue data, and Lexware linking metadata when deleting the plugin."
+msgstr ""
+
+#: includes/class-admin-settings.php:583
+msgid "Data is retained by default. This protects existing invoice and credit note links in case of accidental uninstallation or reinstallation."
+msgstr ""
+
+#: includes/class-admin-settings.php:593
+#: includes/class-admin-settings.php:608
+#: includes/class-admin-settings.php:638
+#: includes/class-invoice-reconciler.php:175
+msgid "Permission denied."
+msgstr ""
+
+#: includes/class-admin-settings.php:660
+msgid "Queue status"
+msgstr ""
+
+#: includes/class-admin-settings.php:665
+msgid "Process queue now"
+msgstr ""
+
+#: includes/class-admin-settings.php:667
+msgid "Really delete all pending and failed queue items?"
+msgstr ""
+
+#: includes/class-admin-settings.php:670
+msgid "Clear queue"
+msgstr ""
+
+#: includes/class-admin-settings.php:676
+msgid "Queue item processed successfully!"
+msgstr ""
+
+#: includes/class-admin-settings.php:678
+msgid "The queue item could not be processed. See the error log for details."
+msgstr ""
+
+#. translators: %d: Number of deleted queue items
+#: includes/class-admin-settings.php:682
+#, php-format
+msgid "%d queue items deleted!"
+msgstr ""
+
+#: includes/class-admin-settings.php:684
+msgid "The safety lock was released after manual verification. A new write operation is now possible."
+msgstr ""
+
+#: includes/class-admin-settings.php:686
+msgid "The safety lock could not be released."
+msgstr ""
+
+#: includes/class-admin-settings.php:692
+msgid "Order"
+msgstr ""
+
+#: includes/class-admin-settings.php:693
+#: includes/class-admin-settings.php:698
+msgid "Action"
+msgstr ""
+
+#: includes/class-admin-settings.php:694
+msgid "Status"
+msgstr ""
+
+#: includes/class-admin-settings.php:695
+msgid "Attempts"
+msgstr ""
+
+#: includes/class-admin-settings.php:696
+#: includes/class-woo-lexware-integration.php:370
+msgid "Created"
+msgstr ""
+
+#: includes/class-admin-settings.php:697
+msgid "Error message"
+msgstr ""
+
+#: includes/class-admin-settings.php:703
+msgid "The queue is empty"
+msgstr ""
+
+#: includes/class-admin-settings.php:716
+msgid "Only release this lock after checking in Lexware whether the document has already been created. Continue?"
+msgstr ""
+
+#: includes/class-admin-settings.php:720
+msgid "Release after verification"
+msgstr ""
+
+#: includes/class-admin-settings.php:729
+msgid "Error log (last 20)"
+msgstr ""
+
+#: includes/class-admin-settings.php:733
+msgid "Time"
+msgstr ""
+
+#: includes/class-admin-settings.php:734
+msgid "Title"
+msgstr ""
+
+#: includes/class-admin-settings.php:735
+msgid "Message"
+msgstr ""
+
+#: includes/class-admin-settings.php:740
+msgid "No errors"
+msgstr ""
+
+#: includes/class-customer-area.php:55
+msgid "Download invoice"
+msgstr ""
+
+#: includes/class-customer-area.php:97
+#: includes/class-woo-lexware-integration.php:540
+msgid "Invalid security token"
+msgstr ""
+
+#: includes/class-customer-area.php:103
+#: includes/class-queue-handler.php:256
+#: includes/class-queue-handler.php:257
+#: includes/class-woo-lexware-integration.php:390
+#: includes/class-woo-lexware-integration.php:418
+#: includes/class-woo-lexware-integration.php:446
+#: includes/class-woo-lexware-integration.php:481
+#: includes/class-woo-lexware-integration.php:511
+#: includes/class-woo-lexware-integration.php:547
+msgid "Order not found"
+msgstr ""
+
+#: includes/class-customer-area.php:109
+#: includes/class-woo-lexware-integration.php:382
+#: includes/class-woo-lexware-integration.php:410
+#: includes/class-woo-lexware-integration.php:436
+#: includes/class-woo-lexware-integration.php:473
+#: includes/class-woo-lexware-integration.php:501
+#: includes/class-woo-lexware-integration.php:535
+msgid "Permission denied"
+msgstr ""
+
+#: includes/class-customer-area.php:115
+#: includes/class-queue-handler.php:362
+#: includes/class-woo-lexware-integration.php:451
+#: includes/class-woo-lexware-integration.php:551
+msgid "No invoice available"
+msgstr ""
+
+#: includes/class-customer-area.php:130
+#: includes/class-woo-lexware-integration.php:565
+msgid "Invoice document not found"
+msgstr ""
+
+#: includes/class-customer-area.php:135
+#: includes/class-woo-lexware-integration.php:570
+msgid "The invoice document could not be read"
+msgstr ""
+
+#: includes/class-invoice-email.php:22
+#: includes/class-woo-lexware-integration.php:136
+#: includes/class-woo-lexware-integration.php:144
+msgid "Lexware invoice"
+msgstr ""
+
+#: includes/class-invoice-email.php:23
+msgid "Email with the Lexware invoice document attached (PDF or XRechnung XML)"
+msgstr ""
+
+#. translators: {order_number} is a WooCommerce placeholder. Keep it unchanged.
+#: includes/class-invoice-email.php:37
+msgid "Your invoice for order {order_number}"
+msgstr ""
+
+#: includes/class-invoice-email.php:41
+msgid "Invoice for your order"
+msgstr ""
+
+#: includes/class-invoice-email.php:71
+msgid "The invoice document could not be prepared."
+msgstr ""
+
+#. translators: %s: error message
+#: includes/class-invoice-email.php:74
+#, php-format
+msgid "Invoice email not sent: %s"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:138
+msgid "Historical invoice reconciliation is already running. A concurrent restart was prevented for safety reasons."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:258
+msgid "Historical invoice reconciliation could not load paginated WooCommerce orders."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:330
+msgid "The next batch of historical invoice reconciliation could not be scheduled."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:352
+#: includes/class-invoice-reconciler.php:385
+msgid "Invalid order for Lexware reconciliation."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:425
+msgid "Lexware returned incomplete invoice data during historical reconciliation."
+msgstr ""
+
+#. translators: 1: Lexware invoice number, 2: Lexware invoice ID.
+#: includes/class-invoice-reconciler.php:444
+#, php-format
+msgid "Existing Lexware invoice linked automatically: %1$s (ID: %2$s). The order number in the introduction and an identical total amount were used for matching."
+msgstr ""
+
+#. translators: 1: linked invoices, 2: orders without a match, 3: orders requiring review.
+#: includes/class-invoice-reconciler.php:478
+#, php-format
+msgid "Historical Lexware invoice reconciliation completed: %1$d linked, %2$d without a match, %3$d requiring review."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:516
+msgid "Not started yet"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:517
+msgid "Scheduled / waiting for background processing"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:518
+msgid "Running"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:519
+msgid "Completed"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:520
+msgid "API key missing or invalid"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:521
+msgid "The scheduler could not be started"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:522
+msgid "Error"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:527
+msgid "Historical Lexware invoice reconciliation"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:530
+msgid "Invoice reconciliation has been restarted."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:532
+msgid "Invoice reconciliation is already running. A concurrent restart was not started for safety reasons."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:534
+msgid "Invoice reconciliation could not be started. Please check the API configuration and error status."
+msgstr ""
+
+#. translators: 1: status label, 2: current page, 3: total pages or question mark.
+#: includes/class-invoice-reconciler.php:539
+#, php-format
+msgid "Status: %1$s · Batch %2$d/%3$s"
+msgstr ""
+
+#. translators: 1: checked orders, 2: matched invoices, 3: no matches, 4: errors, 5: already linked orders.
+#: includes/class-invoice-reconciler.php:546
+#, php-format
+msgid "Checked: %1$d · Linked: %2$d · No match: %3$d · Review required/errors: %4$d · Already linked: %5$d"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:555
+msgid "Last error:"
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:558
+msgid "A manual restart checks all current unlinked orders again. Existing Lexware invoice links are not changed."
+msgstr ""
+
+#: includes/class-invoice-reconciler.php:562
+msgid "Start / restart historical invoice reconciliation"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:186
+msgid "An archived customer contact with this email address already exists in Lexware. Please check the contact in Lexware before creating a new invoice."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:191
+msgid "Lexware did not return a valid contact ID during the contact search."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:202
+msgid "Multiple customer contacts with exactly the same email address exist in Lexware. Please resolve the duplicates in Lexware."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:219
+msgid "Invalid stored Lexware contact ID."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:226
+msgid "The Lexware contact linked to this order is archived. Please check the link in Lexware."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:229
+msgid "The Lexware contact linked to this order does not have a customer role."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:259
+msgid "Lexware requires the contact person's last name for a company contact."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:285
+msgid "The last name is missing for the Lexware customer contact."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:295
+msgid "A valid two-letter country code is missing for the Lexware customer contact."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:324
+msgid "Lexware did not return a valid contact ID after creation. The contact may still have been created; please check in Lexware before retrying."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:337
+msgid "Invalid order"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:340
+msgid "Lexware currently supports only EUR invoices through this interface."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:350
+msgid "Order date missing."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:359
+msgid "The order contains no billable line items."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:364
+msgid "The name or country of the billing address is missing for the Lexware invoice."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:379
+msgid "Thank you for your order."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:395
+msgid "Lexware did not return a valid invoice ID after creation. The invoice may still have been created; please check in Lexware before retrying."
+msgstr ""
+
+#. translators: 1: Invoice number, 2: Invoice ID
+#: includes/class-lexware-api-client.php:428
+#, php-format
+msgid "Lexware invoice created: %1$s (ID: %2$s)"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:429
+msgid "Draft/open"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:449
+msgid "The tax type of the original Lexware invoice cannot be safely used for a credit note."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:477
+msgid "The billing address of the original Lexware invoice cannot be safely used for the credit note."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:489
+msgid "The original Lexware invoice contains an invalid line item."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:493
+msgid "The original Lexware invoice contains an unsupported line item type."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:497
+msgid "A line item of the original Lexware invoice has no name."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:512
+msgid "A material/service line item of the original Lexware invoice has no valid reference ID."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:518
+msgid "A line item of the original Lexware invoice has no valid quantity."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:523
+msgid "A line item of the original Lexware invoice has no valid unit."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:530
+msgid "A line item of the original Lexware invoice has no EUR unit price that can be safely used."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:547
+msgid "A Lexware credit note cannot be created for this order."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:551
+#: includes/class-lexware-api-client.php:684
+msgid "Invalid Lexware invoice ID."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:570
+msgid "The Lexware invoice is still a draft and cannot be credited as a follow-up document through the API. Please check/finalize the invoice in Lexware."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:582
+msgid "A linked credit note already exists for this Lexware invoice and cannot be unambiguously assigned to this WooCommerce order. Automatic cancellation was stopped for safety reasons; please check in Lexware."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:604
+msgid "The original Lexware invoice contains no line items that can be safely credited."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:614
+msgid "The original Lexware invoice does not use the supported EUR currency."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:629
+msgid "Credit note / cancellation"
+msgstr ""
+
+#. translators: %s: Original invoice number or ID
+#: includes/class-lexware-api-client.php:631
+#, php-format
+msgid "Credit note for invoice %s"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:641
+msgid "Lexware did not return a valid credit note ID after creation. The credit note may still have been created; please check in Lexware before retrying."
+msgstr ""
+
+#. translators: 1: Credit note number, 2: Credit note ID
+#: includes/class-lexware-api-client.php:667
+#, php-format
+msgid "Lexware credit note created: %1$s (ID: %2$s)"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:668
+msgid "open"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:691
+msgid "No invoice document is available for sending a Lexware invoice draft."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:701
+msgid "Lexware did not return a valid invoice document."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:711
+msgid "Lexware did not return a plausible XRechnung XML document."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:717
+msgid "Lexware did not return a valid PDF document."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:725
+msgid "The temporary invoice document could not be created."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:731
+msgid "The WordPress filesystem is unavailable."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:736
+msgid "The temporary invoice document could not be written."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:752
+msgid "This invoice is an XRechnung. The PDF rendition provided by Lexware is only a preview; the legally relevant invoice document is XML."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:903
+msgid "piece"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:926
+msgid "Deposit – refundable security deposit"
+msgstr ""
+
+#. translators: %s: deposit amount
+#: includes/class-lexware-api-client.php:929
+#, php-format
+msgid "Deposit collected in addition to the invoice total: %s. The deposit is not consideration for the rental and will be refunded unless there is damage, loss, or a cleaning charge payable under the contract."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:943
+#: includes/class-lexware-api-client.php:957
+#: includes/class-lexware-api-client.php:977
+msgid "flat rate"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:955
+msgid "Shipping costs"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:975
+msgid "Gift voucher redemption"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1148
+msgid "Invalid order for the Lexware invoice search."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1151
+#: includes/class-lexware-api-client.php:1270
+msgid "No valid API key configured"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1157
+msgid "The order has no usable order number or creation date."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1193
+msgid "Lexware did not return a valid document list during the historical invoice search."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1206
+msgid "Lexware returned an invalid invoice ID during the historical invoice search."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1214
+msgid "Lexware returned incomplete invoice data during the historical invoice search."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1225
+msgid "Lexware returned inconsistent invoice data. The order was not linked automatically."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1232
+msgid "The Lexware search period contains too many invoices for safe automatic reconciliation. Please review the order manually or narrow the search period using a filter."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1246
+msgid "A matching invoice draft was found in Lexware for this order. Manual review is required to prevent duplicate documents."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1265
+msgid "Multiple invoices matching this order number and total amount were found in Lexware. No automatic link was created."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1274
+msgid "Invalid API method"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1279
+msgid "Invalid API endpoint"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1298
+msgid "API data could not be serialized."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1308
+msgid "API transport error"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1309
+msgid "The connection to the Lexware API failed."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1311
+msgid "The write operation will not be retried automatically because it may already have completed on the server. Please check in Lexware."
+msgstr ""
+
+#. translators: %d: HTTP status code returned by the Lexware Office API.
+#: includes/class-lexware-api-client.php:1341
+#, php-format
+msgid "Lexware API error (HTTP %d)"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1349
+msgid "The write operation will not be retried automatically because Lexware may already have processed it despite the error. Please check in Lexware before sending again."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1351
+msgid "API error"
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1361
+msgid "Lexware confirmed the write operation succeeded but did not return a usable response body. The record may already have been created; please check in Lexware before retrying."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1372
+msgid "Lexware returned an invalid JSON response after a write operation. The record may already have been created; please check in Lexware before retrying."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1373
+msgid "Lexware returned an invalid JSON response."
+msgstr ""
+
+#: includes/class-lexware-api-client.php:1437
+msgid "[Patsch9 Accounting Bridge] Error"
+msgstr ""
+
+#. translators: 1: Error title, 2: Error message, 3: Local timestamp.
+#: includes/class-lexware-api-client.php:1440
+#, php-format
+msgid ""
+"Error: %1$s\n"
+"\n"
+"Message: %2$s\n"
+"\n"
+"Time: %3$s"
+msgstr ""
+
+#: includes/class-queue-handler.php:50
+msgid "Every minute"
+msgstr ""
+
+#: includes/class-queue-handler.php:123
+msgid "Processing was interrupted unexpectedly. To prevent duplicate documents, this write operation will not be retried automatically. Please check in Lexware first and link the document manually if necessary."
+msgstr ""
+
+#: includes/class-queue-handler.php:174
+msgid "Invalid queue action."
+msgstr ""
+
+#: includes/class-queue-handler.php:197
+msgid "This Lexware write operation is locked after an ambiguous transmission state. Please check in Lexware first, then explicitly release the lock under WooCommerce > Accounting Bridge > Logs & Queue."
+msgstr ""
+
+#: includes/class-queue-handler.php:207
+msgid "This Lexware action is already being processed."
+msgstr ""
+
+#: includes/class-queue-handler.php:209
+msgid "There is currently no due queue item for this order."
+msgstr ""
+
+#: includes/class-queue-handler.php:222
+msgid "The Lexware action was claimed concurrently by another process."
+msgstr ""
+
+#: includes/class-queue-handler.php:248
+msgid "No due items in the queue"
+msgstr ""
+
+#: includes/class-queue-handler.php:260
+#: includes/class-queue-handler.php:261
+#: includes/class-queue-handler.php:276
+msgid "Unknown queue action"
+msgstr ""
+
+#: includes/class-queue-handler.php:304
+msgid "Lexware: The order was closed during/after invoice creation; a credit note was queued automatically."
+msgstr ""
+
+#: includes/class-queue-handler.php:323
+msgid "Lexware: Invoice creation skipped because the order is already closed/cancelled."
+msgstr ""
+
+#: includes/class-queue-handler.php:381
+msgid "No invoice available for updating."
+msgstr ""
+
+#: includes/class-queue-handler.php:424
+msgid "Invoice emailed automatically"
+msgstr ""
+
+#: includes/class-queue-handler.php:427
+msgid "Automatic invoice email failed. The invoice was created in Lexware; please check the email/document."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:63
+msgid "Lexware invoice already exists"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:105
+msgid "Create an invoice for this order now?"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:106
+msgid "Creating..."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:107
+#: includes/class-woo-lexware-integration.php:299
+msgid "✨ Create invoice now"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:108
+msgid "Error creating the invoice"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:109
+msgid "Really cancel the invoice?"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:110
+msgid "Cancelling..."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:111
+#: includes/class-woo-lexware-integration.php:253
+msgid "Cancel invoice"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:112
+msgid "Error cancelling the invoice"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:113
+msgid "Email the invoice to the customer now?"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:114
+msgid "Sending..."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:115
+#: includes/class-woo-lexware-integration.php:254
+msgid "📧 Email invoice"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:116
+msgid "Error sending the email"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:117
+#: includes/class-woo-lexware-integration.php:461
+msgid "Email sent"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:118
+msgid "Update the invoice? The existing finalized invoice will be corrected in Lexware using a linked credit note and then recreated. This automatic correction is not available for invoice drafts."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:119
+msgid "Updating..."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:120
+#: includes/class-woo-lexware-integration.php:255
+msgid "🔄 Update invoice"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:121
+msgid "Error updating the invoice"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:122
+msgid ""
+"Really remove the link to the Lexware invoice?\n"
+"\n"
+"The invoice will remain in Lexware, but you will be able to create a new invoice for this order."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:125
+msgid "Removing..."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:126
+#: includes/class-woo-lexware-integration.php:258
+msgid "🔗 Remove link"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:127
+msgid "Error removing the link"
+msgstr ""
+
+#. translators: 1: Lexware invoice ID, 2: Invoice number
+#: includes/class-woo-lexware-integration.php:198
+#, php-format
+msgid "Invoice data entered manually: ID %1$s, number %2$s"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:204
+msgid "Manual Lexware link not saved: Please provide a valid Lexware UUID and a complete invoice number."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:231
+#: includes/class-woo-lexware-integration.php:281
+msgid "Invoice number:"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:232
+msgid "Lexware ID:"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:234
+msgid "(Entered manually)"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:236
+msgid "(Retrieved automatically from Lexware)"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:238
+msgid "Status:"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:240
+#: includes/class-woo-lexware-integration.php:368
+msgid "Cancelled"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:242
+msgid "Active"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:246
+msgid "Credit note ID:"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:249
+msgid "Open in Lexware"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:250
+msgid "📄 Download invoice document"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:260
+msgid "Removes only the link to the invoice, not the invoice itself in Lexware."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:264
+msgid "No invoice created yet."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:267
+msgid "Manual entry:"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:270
+msgid "Lexware invoice ID:"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:291
+msgid "Complete both fields and save the order to create a manual link."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:296
+msgid "— or —"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:306
+msgid "Create Lexware invoices"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:336
+msgid "Lexware"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:373
+msgid "None"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:385
+#: includes/class-woo-lexware-integration.php:413
+#: includes/class-woo-lexware-integration.php:439
+#: includes/class-woo-lexware-integration.php:476
+#: includes/class-woo-lexware-integration.php:504
+#: includes/class-woo-lexware-integration.php:543
+msgid "Too many requests. Please wait."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:394
+msgid "A Lexware invoice is already linked to this order. Use \"Update invoice\" or cancel the existing invoice."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:403
+msgid "Invoice created"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:428
+msgid "Invoice cancelled"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:460
+msgid "Invoice sent by email"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:463
+msgid "The invoice email could not be sent. See the order notes for details."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:465
+msgid "Email class not found"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:486
+msgid "No valid invoice available"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:493
+msgid "Invoice updated"
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:527
+msgid "The link to the Lexware invoice was removed. Automatic historical relinking is disabled for this order."
+msgstr ""
+
+#: includes/class-woo-lexware-integration.php:529
+msgid "Link removed"
+msgstr ""
+
+#. translators: %d: Number of invoices added to queue
+#: includes/class-woo-lexware-integration.php:597
+#, php-format
+msgid "%d invoice added to the queue."
+msgid_plural "%d invoices added to the queue."
+msgstr[0] ""
+msgstr[1] ""
+
+#: patsch9-accounting-bridge.php:187
+msgid "Patsch9 Accounting Bridge requires WooCommerce 10.9.4 or later."
+msgstr ""
+
+#: patsch9-accounting-bridge.php:201
+msgid "Patsch9 Accounting Bridge requires WordPress 6.9 or later, WooCommerce 10.9.4 or later, and PHP 8.2 or later."
+msgstr ""
+
+#: patsch9-accounting-bridge.php:202
+msgid "Plugin activation failed"
+msgstr ""
+
+#: patsch9-accounting-bridge.php:370
+msgid "When the Lexware integration is enabled and an invoice is created, the plugin transfers invoice and contact data from the respective WooCommerce order to the Lexware Public API to fulfill the contract. Invoice PDFs are not stored permanently in the WordPress uploads directory; they are processed temporarily for a requested download or email delivery."
+msgstr ""
+
+#: patsch9-accounting-bridge.php:385
+msgid "requires WooCommerce 10.9.4 or later. Please install and activate WooCommerce."
+msgstr ""
+
+#. translators: %s: Customer's first name.
+#: templates/emails/customer-invoice.php:15
+#: templates/emails/plain/customer-invoice.php:13
+#, php-format
+msgid "Hello %s,"
+msgstr ""
+
+#: templates/emails/customer-invoice.php:18
+#: templates/emails/plain/customer-invoice.php:17
+msgid "Thank you for your order. Your invoice document is attached (PDF or XML for XRechnung)."
+msgstr ""
+
+#. translators: %s: Order number.
+#: templates/emails/customer-invoice.php:22
+#, php-format
+msgid "Order #%s"
 msgstr ""

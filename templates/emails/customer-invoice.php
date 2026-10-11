@@ -11,15 +11,15 @@ do_action('woocommerce_email_header', $email_heading, $email); // phpcs:ignore W
 ?>
 
 <p><?php
-/* translators: %s: Vorname des Kunden */
-echo esc_html(sprintf(__('Hallo %s,', 'patsch9-accounting-bridge'), $order->get_billing_first_name()));
+/* translators: %s: Customer's first name. */
+echo esc_html(sprintf(__('Hello %s,', 'patsch9-accounting-bridge'), $order->get_billing_first_name()));
 ?></p>
 
-<p><?php esc_html_e('vielen Dank für Ihre Bestellung. Im Anhang finden Sie Ihre Rechnungsdatei (PDF bzw. bei XRechnung XML).', 'patsch9-accounting-bridge'); ?></p>
+<p><?php esc_html_e('Thank you for your order. Your invoice document is attached (PDF or XML for XRechnung).', 'patsch9-accounting-bridge'); ?></p>
 
 <h2><?php
-/* translators: %s: Bestellnummer */
-echo esc_html(sprintf(__('Bestellung #%s', 'patsch9-accounting-bridge'), $order->get_order_number()));
+/* translators: %s: Order number. */
+echo esc_html(sprintf(__('Order #%s', 'patsch9-accounting-bridge'), $order->get_order_number()));
 ?></h2>
 
 <?php

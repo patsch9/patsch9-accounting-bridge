@@ -4,7 +4,7 @@ Tags: woocommerce, lexware, invoices, accounting, api
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2026.10.3
+Stable tag: 2026.10.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,7 +93,17 @@ The customer, order, line-item, price, tax, and reference data required to creat
 
 Not by default. Full data cleanup on uninstall must be explicitly enabled in the plugin settings.
 
+= Which languages are supported? =
+
+English is the source language. A complete German (de_DE) translation is bundled, including customer emails and invoice text defaults for new installations. Existing custom invoice texts and saved email settings are preserved. Additional translations can be contributed at https://translate.wordpress.org/projects/wp-plugins/patsch9-accounting-bridge/.
+
 == Changelog ==
+
+= 2026.10.4 =
+* Uses English source strings and bundles a complete German translation.
+* Generates the complete translation template from source with WP-CLI.
+* Makes invoice defaults, administrator error emails, and settings examples translatable while preserving saved texts.
+* Handles translated confirmation messages safely without embedding them in JavaScript code.
 
 = 2026.10.3 =
 * Addresses WordPress.org review findings: admin assets are enqueued, plugin-owned identifiers use a unique prefix, and admin notices are scoped to relevant screens.
