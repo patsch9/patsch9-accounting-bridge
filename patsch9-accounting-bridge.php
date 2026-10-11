@@ -360,7 +360,7 @@ public function register_invoice_email($email_classes) {
     public function load_translations() {
         // WordPress.org language packs take precedence; this path enables the
         // bundled German catalog for installations without a language pack.
-        load_plugin_textdomain('patsch9-accounting-bridge', false, dirname(PATSACBR_PLUGIN_BASENAME) . '/languages');
+        load_plugin_textdomain('patsch9-accounting-bridge', false, dirname(PATSACBR_PLUGIN_BASENAME) . '/languages'); // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound -- Registers the bundled de_DE catalog for installations without an approved WordPress.org language pack.
     }
 
     public function add_privacy_policy_content() {

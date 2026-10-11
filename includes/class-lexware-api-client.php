@@ -1437,7 +1437,11 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
                     __('[Patsch9 Accounting Bridge] Error', 'patsch9-accounting-bridge'),
                     sprintf(
                         /* translators: 1: Error title, 2: Error message, 3: Local timestamp. */
-                        __('Error: %1$s' . "\n\n" . 'Message: %2$s' . "\n\n" . 'Time: %3$s', 'patsch9-accounting-bridge'),
+                        __('Error: %1$s
+
+Message: %2$s
+
+Time: %3$s', 'patsch9-accounting-bridge'),
                         $this->redact_log_string($title),
                         $this->redact_log_string($message),
                         current_time('mysql')
