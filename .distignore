@@ -1,6 +1,7 @@
 # Repository/development files excluded from the installable WordPress release ZIP.
 /.git/
 /.github/
+/.wordpress-org/
 /.gitignore
 /.gitattributes
 /.distignore
