@@ -150,6 +150,50 @@ jobs:
           test -f ".wporg-build/$SLUG/readme.txt"
           test -f ".wporg-build/$SLUG/LICENSE"
 
+      - name: Load and validate current WordPress.org assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # WordPress.org assets are global directory assets rather than versioned
+          # plugin code. Load them from the current main branch even when an older
+          # already-published release tag is being deployed for the first time.
+          git fetch origin main:refs/remotes/origin/main --no-tags
+          rm -rf .wordpress-org
+          git restore --source=refs/remotes/origin/main -- .wordpress-org
+
+          python3 <<'PY'
+          import struct
+          import sys
+          from pathlib import Path
+
+          expected = {
+              '.wordpress-org/icon-128x128.png': (128, 128),
+              '.wordpress-org/icon-256x256.png': (256, 256),
+              '.wordpress-org/banner-772x250.png': (772, 250),
+              '.wordpress-org/banner-1544x500.png': (1544, 500),
+          }
+
+          for filename, dimensions in expected.items():
+              path = Path(filename)
+              if not path.is_file():
+                  print(f'::error::Missing WordPress.org asset: {filename}')
+                  sys.exit(1)
+
+              data = path.read_bytes()
+              if len(data) < 24 or data[:8] != b'\x89PNG\r\n\x1a\n' or data[12:16] != b'IHDR':
+                  print(f'::error::{filename} is not a valid PNG file.')
+                  sys.exit(1)
+
+              width, height = struct.unpack('>II', data[16:24])
+              if (width, height) != dimensions:
+                  print(
+                      f'::error::{filename} has {width}x{height}; '
+                      f'expected {dimensions[0]}x{dimensions[1]}.'
+                  )
+                  sys.exit(1)
+          PY
+
       - name: Deploy verified package to WordPress.org SVN
         uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
         env:
