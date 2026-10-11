@@ -47,7 +47,7 @@ class PATSACBR_Queue_Handler {
         if (!isset($schedules['patsacbr_every_minute'])) {
             $schedules['patsacbr_every_minute'] = array(
                 'interval' => MINUTE_IN_SECONDS,
-                'display'  => esc_html__('Jede Minute', 'patsch9-accounting-bridge'),
+                'display'  => esc_html__('Every minute', 'patsch9-accounting-bridge'),
             );
         }
         return $schedules;
@@ -120,7 +120,7 @@ class PATSACBR_Queue_Handler {
         // Lexware accepted the request but before WordPress persisted the result,
         // replaying the item could create a duplicate voucher. Therefore stale
         // processing items fail closed and require a manual Lexware check.
-        $message = esc_html__('Verarbeitung wurde unerwartet unterbrochen. Aus Schutz vor Doppelbelegen wird dieser Schreibvorgang nicht automatisch wiederholt. Bitte zuerst in Lexware prüfen und den Beleg bei Bedarf manuell verknüpfen.', 'patsch9-accounting-bridge');
+        $message = esc_html__('Processing was interrupted unexpectedly. To prevent duplicate documents, this write operation will not be retried automatically. Please check in Lexware first and link the document manually if necessary.', 'patsch9-accounting-bridge');
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $wpdb->query($wpdb->prepare(
             "UPDATE %i SET status='manual_check', error_message=%s, locked_at=NULL, next_attempt_at=NULL, updated_at=%s WHERE status='processing' AND locked_at IS NOT NULL AND locked_at < %s",
@@ -171,7 +171,7 @@ class PATSACBR_Queue_Handler {
         $order_id = absint($order_id);
         $action = sanitize_key($action);
         if (!$order_id || !in_array($action, self::allowed_actions(), true)) {
-            return new WP_Error('invalid_queue_target', esc_html__('Ungültige Queue-Aktion.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_queue_target', esc_html__('Invalid queue action.', 'patsch9-accounting-bridge'));
         }
         $table = $wpdb->prefix . 'patsacbr_queue';
         $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
@@ -194,7 +194,7 @@ class PATSACBR_Queue_Handler {
                 $action
             ));
             if ($manual_check) {
-                return new WP_Error('queue_manual_check', esc_html__('Dieser Lexware-Schreibvorgang ist nach einem unklaren Übertragungszustand gesperrt. Bitte zuerst in Lexware prüfen und die Sperre unter WooCommerce > Accounting Bridge > Logs & Queue ausdrücklich freigeben.', 'patsch9-accounting-bridge'));
+                return new WP_Error('queue_manual_check', esc_html__('This Lexware write operation is locked after an ambiguous transmission state. Please check in Lexware first, then explicitly release the lock under WooCommerce > Accounting Bridge > Logs & Queue.', 'patsch9-accounting-bridge'));
             }
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
             $processing = $wpdb->get_var($wpdb->prepare(
@@ -204,9 +204,9 @@ class PATSACBR_Queue_Handler {
                 $action
             ));
             if ($processing) {
-                return new WP_Error('queue_busy', esc_html__('Diese Lexware-Aktion wird bereits verarbeitet.', 'patsch9-accounting-bridge'));
+                return new WP_Error('queue_busy', esc_html__('This Lexware action is already being processed.', 'patsch9-accounting-bridge'));
             }
-            return new WP_Error('queue_not_due', esc_html__('Für diese Bestellung ist aktuell kein fälliges Queue-Item vorhanden.', 'patsch9-accounting-bridge'));
+            return new WP_Error('queue_not_due', esc_html__('There is currently no due queue item for this order.', 'patsch9-accounting-bridge'));
         }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $updated = $wpdb->query($wpdb->prepare(
@@ -219,7 +219,7 @@ class PATSACBR_Queue_Handler {
             $now
         ));
         if (1 !== (int)$updated) {
-            return new WP_Error('queue_race', esc_html__('Die Lexware-Aktion wurde parallel von einem anderen Prozess übernommen.', 'patsch9-accounting-bridge'));
+            return new WP_Error('queue_race', esc_html__('The Lexware action was claimed concurrently by another process.', 'patsch9-accounting-bridge'));
         }
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         return $wpdb->get_row($wpdb->prepare("SELECT * FROM %i WHERE id=%d", $table, absint($id)));
@@ -245,7 +245,7 @@ class PATSACBR_Queue_Handler {
         $instance = self::get_instance();
         $item = $instance->claim_next_item();
         if (!$item) {
-            return new WP_Error('no_items', esc_html__('Keine fälligen Items in der Queue', 'patsch9-accounting-bridge'));
+            return new WP_Error('no_items', esc_html__('No due items in the queue', 'patsch9-accounting-bridge'));
         }
         return $instance->process_item($item);
     }
@@ -253,12 +253,12 @@ class PATSACBR_Queue_Handler {
     private function process_item($item) {
         $order = wc_get_order(absint($item->order_id));
         if (!$order) {
-            $this->mark_as_failed($item, esc_html__('Bestellung nicht gefunden', 'patsch9-accounting-bridge'), false);
-            return new WP_Error('order_not_found', esc_html__('Bestellung nicht gefunden', 'patsch9-accounting-bridge'));
+            $this->mark_as_failed($item, esc_html__('Order not found', 'patsch9-accounting-bridge'), false);
+            return new WP_Error('order_not_found', esc_html__('Order not found', 'patsch9-accounting-bridge'));
         }
         if (!in_array($item->action, self::allowed_actions(), true)) {
-            $this->mark_as_failed($item, esc_html__('Unbekannte Queue-Aktion', 'patsch9-accounting-bridge'), false);
-            return new WP_Error('invalid_action', esc_html__('Unbekannte Queue-Aktion', 'patsch9-accounting-bridge'));
+            $this->mark_as_failed($item, esc_html__('Unknown queue action', 'patsch9-accounting-bridge'), false);
+            return new WP_Error('invalid_action', esc_html__('Unknown queue action', 'patsch9-accounting-bridge'));
         }
 
         $api_client = new PATSACBR_API_Client();
@@ -273,7 +273,7 @@ class PATSACBR_Queue_Handler {
                 $result = $this->handle_update_invoice($order, $api_client);
                 break;
             default:
-                $result = new WP_Error('invalid_action', esc_html__('Unbekannte Queue-Aktion', 'patsch9-accounting-bridge'));
+                $result = new WP_Error('invalid_action', esc_html__('Unknown queue action', 'patsch9-accounting-bridge'));
         }
 
         if (is_wp_error($result)) {
@@ -301,7 +301,7 @@ class PATSACBR_Queue_Handler {
             if ($fresh_order && $fresh_order->has_status(array('cancelled', 'refunded', 'failed', 'trash'))) {
                 if ($fresh_order->get_meta('_patsacbr_lexware_invoice_id') && 'yes' !== $fresh_order->get_meta('_patsacbr_lexware_invoice_voided')) {
                     self::add_to_queue($fresh_order->get_id(), 'void_invoice');
-                    $fresh_order->add_order_note(esc_html__('Lexware: Bestellung wurde während/nach der Rechnungserstellung beendet; Gutschrift wurde automatisch vorgemerkt.', 'patsch9-accounting-bridge'));
+                    $fresh_order->add_order_note(esc_html__('Lexware: The order was closed during/after invoice creation; a credit note was queued automatically.', 'patsch9-accounting-bridge'));
                 }
                 return true;
             }
@@ -320,7 +320,7 @@ class PATSACBR_Queue_Handler {
             if ($existing && 'yes' !== $order->get_meta('_patsacbr_lexware_invoice_voided')) {
                 self::add_to_queue($order->get_id(), 'void_invoice');
             }
-            $order->add_order_note(esc_html__('Lexware: Rechnungserstellung übersprungen, da die Bestellung bereits beendet/storniert ist.', 'patsch9-accounting-bridge'));
+            $order->add_order_note(esc_html__('Lexware: Invoice creation skipped because the order is already closed/cancelled.', 'patsch9-accounting-bridge'));
             return array('skipped' => true, 'reason' => 'terminal_order_status');
         }
 
@@ -359,7 +359,7 @@ class PATSACBR_Queue_Handler {
     private function handle_void_invoice($order, $api_client) {
         $invoice_id = sanitize_text_field((string)$order->get_meta('_patsacbr_lexware_invoice_id'));
         if (!$invoice_id) {
-            return new WP_Error('no_invoice', esc_html__('Keine Rechnung vorhanden', 'patsch9-accounting-bridge'));
+            return new WP_Error('no_invoice', esc_html__('No invoice available', 'patsch9-accounting-bridge'));
         }
         return $api_client->create_credit_note($order, $invoice_id);
     }
@@ -378,7 +378,7 @@ class PATSACBR_Queue_Handler {
             return $created;
         }
         if (!$current_invoice) {
-            return new WP_Error('no_invoice', esc_html__('Keine Rechnung für die Aktualisierung vorhanden.', 'patsch9-accounting-bridge'));
+            return new WP_Error('no_invoice', esc_html__('No invoice available for updating.', 'patsch9-accounting-bridge'));
         }
 
         $void = $this->handle_void_invoice($order, $api_client);
@@ -421,10 +421,10 @@ class PATSACBR_Queue_Handler {
         if (isset($emails['PATSACBR_Invoice_Email'])) {
             $sent = $emails['PATSACBR_Invoice_Email']->trigger($order->get_id(), $order);
             if ($sent) {
-                $order->add_order_note(esc_html__('Rechnung automatisch per E-Mail versendet', 'patsch9-accounting-bridge'));
+                $order->add_order_note(esc_html__('Invoice emailed automatically', 'patsch9-accounting-bridge'));
                 return true;
             }
-            $order->add_order_note(esc_html__('Automatischer Rechnungsversand fehlgeschlagen. Rechnung wurde in Lexware erstellt; bitte E-Mail/Datei prüfen.', 'patsch9-accounting-bridge'));
+            $order->add_order_note(esc_html__('Automatic invoice email failed. The invoice was created in Lexware; please check the email/document.', 'patsch9-accounting-bridge'));
         }
         return false;
     }

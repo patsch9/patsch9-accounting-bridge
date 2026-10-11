@@ -183,12 +183,12 @@ class PATSACBR_API_Client {
                 if (!empty($contact['archived'])) {
                     return new WP_Error(
                         'archived_contact_match',
-                        __('In Lexware existiert bereits ein archivierter Kundenkontakt mit dieser E-Mail-Adresse. Bitte den Kontakt in Lexware prüfen, bevor eine neue Rechnung erzeugt wird.', 'patsch9-accounting-bridge'),
+                        __('An archived customer contact with this email address already exists in Lexware. Please check the contact in Lexware before creating a new invoice.', 'patsch9-accounting-bridge'),
                         array('retryable' => false)
                     );
                 }
                 if (empty($contact['id']) || !$this->is_valid_uuid((string) $contact['id'])) {
-                    return new WP_Error('invalid_contact_search_response', __('Lexware hat bei der Kontaktsuche keine gültige Kontakt-ID geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                    return new WP_Error('invalid_contact_search_response', __('Lexware did not return a valid contact ID during the contact search.', 'patsch9-accounting-bridge'), array('retryable' => false));
                 }
                 $matches[] = $contact;
             }
@@ -199,7 +199,7 @@ class PATSACBR_API_Client {
         if (count($matches) > 1) {
             return new WP_Error(
                 'ambiguous_contact_match',
-                __('In Lexware existieren mehrere Kundenkontakte mit exakt derselben E-Mail-Adresse. Bitte die Dubletten in Lexware klären.', 'patsch9-accounting-bridge'),
+                __('Multiple customer contacts with exactly the same email address exist in Lexware. Please resolve the duplicates in Lexware.', 'patsch9-accounting-bridge'),
                 array('retryable' => false)
             );
         }
@@ -216,17 +216,17 @@ class PATSACBR_API_Client {
         // Daten, Notizen oder weitere Kontaktangaben könnten sonst verloren gehen.
         if ($existing_contact_id) {
             if (!$this->is_valid_uuid($existing_contact_id)) {
-                return new WP_Error('invalid_contact_id', __('Ungültige gespeicherte Lexware-Kontakt-ID.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('invalid_contact_id', __('Invalid stored Lexware contact ID.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $existing = $this->request('GET', 'contacts/' . rawurlencode($existing_contact_id));
             if (is_wp_error($existing)) {
                 return $existing;
             }
             if (!empty($existing['archived'])) {
-                return new WP_Error('archived_contact', __('Der mit der Bestellung verknüpfte Lexware-Kontakt ist archiviert. Bitte die Verknüpfung in Lexware prüfen.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('archived_contact', __('The Lexware contact linked to this order is archived. Please check the link in Lexware.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             if (empty($existing['roles']['customer'])) {
-                return new WP_Error('contact_not_customer', __('Der mit der Bestellung verknüpfte Lexware-Kontakt besitzt keine Kundenrolle.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('contact_not_customer', __('The Lexware contact linked to this order does not have a customer role.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             return $existing;
         }
@@ -256,7 +256,7 @@ class PATSACBR_API_Client {
         if ($is_company) {
             $last_name = trim((string) $order->get_billing_last_name());
             if ('' === $last_name) {
-                return new WP_Error('missing_contact_last_name', __('Für einen Firmenkontakt benötigt Lexware einen Nachnamen der Kontaktperson.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('missing_contact_last_name', __('Lexware requires the contact person\'s last name for a company contact.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $company_data = array(
                 'name' => $billing_company,
@@ -282,7 +282,7 @@ class PATSACBR_API_Client {
         } else {
             $last_name = trim((string) $order->get_billing_last_name());
             if ('' === $last_name) {
-                return new WP_Error('missing_contact_last_name', __('Für einen Lexware-Kundenkontakt fehlt der Nachname.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('missing_contact_last_name', __('The last name is missing for the Lexware customer contact.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $contact_data['person'] = array(
                 'firstName' => (string) $order->get_billing_first_name(),
@@ -292,7 +292,7 @@ class PATSACBR_API_Client {
 
         $country = strtoupper(trim((string) $order->get_billing_country()));
         if (!preg_match('/^[A-Z]{2}$/', $country)) {
-            return new WP_Error('invalid_contact_country', __('Für den Lexware-Kundenkontakt fehlt ein gültiger zweistelliger Ländercode.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('invalid_contact_country', __('A valid two-letter country code is missing for the Lexware customer contact.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
         $contact_data['addresses'] = array(
             'billing' => array(
@@ -321,7 +321,7 @@ class PATSACBR_API_Client {
         if (empty($result['id']) || !$this->is_valid_uuid((string) $result['id'])) {
             return new WP_Error(
                 'invalid_contact_response',
-                __('Lexware hat nach dem Anlegen keine gültige Kontakt-ID zurückgegeben. Der Kontakt könnte trotzdem erstellt worden sein; bitte vor einem erneuten Versuch in Lexware prüfen.', 'patsch9-accounting-bridge'),
+                __('Lexware did not return a valid contact ID after creation. The contact may still have been created; please check in Lexware before retrying.', 'patsch9-accounting-bridge'),
                 array('retryable' => false, 'ambiguous_write' => true)
             );
         }
@@ -334,10 +334,10 @@ class PATSACBR_API_Client {
 
     public function create_invoice($order, $contact_id) {
         if (!$order instanceof WC_Order) {
-            return new WP_Error('invalid_order', __('Ungültige Bestellung', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_order', __('Invalid order', 'patsch9-accounting-bridge'));
         }
         if ('EUR' !== strtoupper((string) $order->get_currency())) {
-            return new WP_Error('unsupported_currency', __('Lexware unterstützt über diese Schnittstelle aktuell nur EUR-Rechnungen.', 'patsch9-accounting-bridge'));
+            return new WP_Error('unsupported_currency', __('Lexware currently supports only EUR invoices through this interface.', 'patsch9-accounting-bridge'));
         }
         $existing_invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
         if ($existing_invoice_id) {
@@ -347,7 +347,7 @@ class PATSACBR_API_Client {
         $finalize   = get_option('patsacbr_finalize_immediately', 'yes') === 'yes';
         $order_date = $order->get_date_created();
         if (!$order_date) {
-            return new WP_Error('missing_order_date', __('Bestelldatum fehlt.', 'patsch9-accounting-bridge'));
+            return new WP_Error('missing_order_date', __('Order date missing.', 'patsch9-accounting-bridge'));
         }
         $voucher_date = $this->format_lexware_date($order_date->getTimestamp());
         // Keep the historic display preference (B2B net, B2C gross), while all
@@ -356,12 +356,12 @@ class PATSACBR_API_Client {
         $line_items = $this->format_line_items($order, false, $tax_type);
         $line_items = array_merge($line_items, $this->format_voucher_redemptions($order, $tax_type));
         if (!$line_items) {
-            return new WP_Error('empty_invoice', __('Die Bestellung enthält keine abrechenbaren Positionen.', 'patsch9-accounting-bridge'));
+            return new WP_Error('empty_invoice', __('The order contains no billable line items.', 'patsch9-accounting-bridge'));
         }
 
         $address = $this->format_address($order);
         if (empty($address['name']) || empty($address['countryCode'])) {
-            return new WP_Error('invalid_address', __('Für die Lexware-Rechnung fehlen Name oder Land der Rechnungsadresse.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_address', __('The name or country of the billing address is missing for the Lexware invoice.', 'patsch9-accounting-bridge'));
         }
         if ($contact_id) {
             $address['contactId'] = sanitize_text_field((string) $contact_id);
@@ -375,9 +375,9 @@ class PATSACBR_API_Client {
             'totalPrice'         => array('currency' => 'EUR'),
             'taxConditions'      => array('taxType' => $tax_type),
             'shippingConditions' => array('shippingType' => 'none'),
-            'title'              => $this->replace_shortcodes(get_option('patsacbr_invoice_title', 'Rechnung'), $order),
-            'introduction'       => $this->replace_shortcodes(get_option('patsacbr_invoice_introduction', 'Vielen Dank für Ihre Bestellung.'), $order),
-            'remark'             => $this->replace_shortcodes(get_option('patsacbr_closing_text', 'Vielen Dank für Ihr Vertrauen.'), $order),
+            'title'              => $this->replace_shortcodes(get_option('patsacbr_invoice_title', __('Invoice', 'patsch9-accounting-bridge')), $order),
+            'introduction'       => $this->replace_shortcodes(get_option('patsacbr_invoice_introduction', __('Thank you for your order.', 'patsch9-accounting-bridge')), $order),
+            'remark'             => $this->replace_shortcodes(get_option('patsacbr_closing_text', __('Thank you for your trust.', 'patsch9-accounting-bridge')), $order),
             'paymentConditions'  => array(
                 'paymentTermLabel'    => $this->replace_shortcodes($this->get_payment_terms_for_order($order), $order),
                 'paymentTermDuration' => max(0, min(3650, (int) $this->get_payment_due_days_for_order($order))),
@@ -392,7 +392,7 @@ class PATSACBR_API_Client {
         if (empty($response['id']) || !$this->is_valid_uuid((string) $response['id'])) {
             return new WP_Error(
                 'invalid_api_response',
-                __('Lexware hat nach dem Erstellen keine gültige Rechnungs-ID zurückgegeben. Die Rechnung könnte trotzdem erstellt worden sein; bitte vor einem erneuten Versuch in Lexware prüfen.', 'patsch9-accounting-bridge'),
+                __('Lexware did not return a valid invoice ID after creation. The invoice may still have been created; please check in Lexware before retrying.', 'patsch9-accounting-bridge'),
                 array('retryable' => false, 'ambiguous_write' => true)
             );
         }
@@ -425,8 +425,8 @@ class PATSACBR_API_Client {
         }
         $order->add_order_note(sprintf(
             /* translators: 1: Invoice number, 2: Invoice ID */
-            __('Lexware Rechnung erstellt: %1$s (ID: %2$s)', 'patsch9-accounting-bridge'),
-            $invoice_number ?: __('Entwurf/offen', 'patsch9-accounting-bridge'),
+            __('Lexware invoice created: %1$s (ID: %2$s)', 'patsch9-accounting-bridge'),
+            $invoice_number ?: __('Draft/open', 'patsch9-accounting-bridge'),
             $invoice_id
         ));
         return $response;
@@ -446,7 +446,7 @@ class PATSACBR_API_Client {
             'photovoltaicequipment',
         );
         if (!in_array(strtolower($tax_type), $allowed, true)) {
-            return new WP_Error('unsupported_credit_tax_type', __('Der Steuertyp der ursprünglichen Lexware-Rechnung kann nicht sicher für eine Gutschrift übernommen werden.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('unsupported_credit_tax_type', __('The tax type of the original Lexware invoice cannot be safely used for a credit note.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
         // Preserve Lexware's documented camelCase enum value exactly where possible.
@@ -474,7 +474,7 @@ class PATSACBR_API_Client {
             $address['contactId'] = $contact_id;
         }
         if ((empty($address['name']) || empty($address['countryCode'])) && empty($address['contactId'])) {
-            return new WP_Error('invalid_credit_address', __('Die Rechnungsadresse der ursprünglichen Lexware-Rechnung kann nicht sicher für die Gutschrift übernommen werden.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('invalid_credit_address', __('The billing address of the original Lexware invoice cannot be safely used for the credit note.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
         return $address;
     }
@@ -486,15 +486,15 @@ class PATSACBR_API_Client {
 
         foreach ($source_items as $source) {
             if (!is_array($source)) {
-                return new WP_Error('invalid_credit_line_item', __('Die ursprüngliche Lexware-Rechnung enthält eine ungültige Position.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('invalid_credit_line_item', __('The original Lexware invoice contains an invalid line item.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $type = sanitize_key((string) ($source['type'] ?? ''));
             if (!in_array($type, array('custom', 'material', 'service', 'text'), true)) {
-                return new WP_Error('unsupported_credit_line_item', __('Die ursprüngliche Lexware-Rechnung enthält einen nicht unterstützten Positionstyp.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('unsupported_credit_line_item', __('The original Lexware invoice contains an unsupported line item type.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $name = sanitize_text_field((string) ($source['name'] ?? ''));
             if ('' === $name) {
-                return new WP_Error('invalid_credit_line_item', __('Eine Position der ursprünglichen Lexware-Rechnung hat keinen Namen.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('invalid_credit_line_item', __('A line item of the original Lexware invoice has no name.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
 
             $item = array('type' => $type, 'name' => $name);
@@ -509,25 +509,25 @@ class PATSACBR_API_Client {
             if (in_array($type, array('material', 'service'), true)) {
                 $id = sanitize_text_field((string) ($source['id'] ?? ''));
                 if (!$this->is_valid_uuid($id)) {
-                    return new WP_Error('invalid_credit_line_reference', __('Eine Material-/Leistungsposition der ursprünglichen Lexware-Rechnung besitzt keine gültige Referenz-ID.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                    return new WP_Error('invalid_credit_line_reference', __('A material/service line item of the original Lexware invoice has no valid reference ID.', 'patsch9-accounting-bridge'), array('retryable' => false));
                 }
                 $item['id'] = $id;
             }
 
             if (!isset($source['quantity']) || !is_numeric($source['quantity']) || 0.0 === (float) $source['quantity']) {
-                return new WP_Error('invalid_credit_quantity', __('Eine Position der ursprünglichen Lexware-Rechnung besitzt keine gültige Menge.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('invalid_credit_quantity', __('A line item of the original Lexware invoice has no valid quantity.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $item['quantity'] = (float) $source['quantity'];
             $item['unitName'] = sanitize_text_field((string) ($source['unitName'] ?? ''));
             if ('' === $item['unitName']) {
-                return new WP_Error('invalid_credit_unit', __('Eine Position der ursprünglichen Lexware-Rechnung besitzt keine gültige Einheit.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('invalid_credit_unit', __('A line item of the original Lexware invoice has no valid unit.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
 
             $source_price = isset($source['unitPrice']) && is_array($source['unitPrice']) ? $source['unitPrice'] : array();
             $currency = strtoupper((string) ($source_price['currency'] ?? ''));
             $amount_key = $use_gross ? 'grossAmount' : 'netAmount';
             if ('EUR' !== $currency || !isset($source_price[$amount_key]) || !is_numeric($source_price[$amount_key]) || !isset($source_price['taxRatePercentage']) || !is_numeric($source_price['taxRatePercentage'])) {
-                return new WP_Error('invalid_credit_unit_price', __('Eine Position der ursprünglichen Lexware-Rechnung besitzt keinen sicher übernehmbaren EUR-Einzelpreis.', 'patsch9-accounting-bridge'), array('retryable' => false));
+                return new WP_Error('invalid_credit_unit_price', __('A line item of the original Lexware invoice has no EUR unit price that can be safely used.', 'patsch9-accounting-bridge'), array('retryable' => false));
             }
             $item['unitPrice'] = array(
                 'currency' => 'EUR',
@@ -544,11 +544,11 @@ class PATSACBR_API_Client {
 
     public function create_credit_note($order, $original_invoice_id) {
         if (!$order instanceof WC_Order) {
-            return new WP_Error('invalid_credit_order', __('Für diese Bestellung kann keine Lexware-Gutschrift erzeugt werden.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_credit_order', __('A Lexware credit note cannot be created for this order.', 'patsch9-accounting-bridge'));
         }
         $original_invoice_id = sanitize_text_field((string) $original_invoice_id);
         if (!$this->is_valid_uuid($original_invoice_id)) {
-            return new WP_Error('invalid_invoice_id', __('Ungültige Lexware-Rechnungs-ID.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_invoice_id', __('Invalid Lexware invoice ID.', 'patsch9-accounting-bridge'));
         }
 
         // An existing credit note is reusable only if it belongs to this exact
@@ -567,7 +567,7 @@ class PATSACBR_API_Client {
         if (($invoice['voucherStatus'] ?? '') === 'draft') {
             return new WP_Error(
                 'draft_invoice_cannot_be_credited',
-                __('Die Lexware-Rechnung ist noch ein Entwurf und kann über die API nicht als Folgevorgang gutgeschrieben werden. Bitte die Rechnung in Lexware prüfen/finalisieren.', 'patsch9-accounting-bridge'),
+                __('The Lexware invoice is still a draft and cannot be credited as a follow-up document through the API. Please check/finalize the invoice in Lexware.', 'patsch9-accounting-bridge'),
                 array('retryable' => false)
             );
         }
@@ -579,7 +579,7 @@ class PATSACBR_API_Client {
                 if (!$existing || $related_id !== $existing) {
                     return new WP_Error(
                         'existing_remote_credit_note',
-                        __('Zu dieser Lexware-Rechnung existiert bereits eine verknüpfte Gutschrift, die nicht eindeutig diesem WooCommerce-Auftrag zugeordnet ist. Automatische Stornierung wurde aus Sicherheitsgründen gestoppt; bitte in Lexware prüfen.', 'patsch9-accounting-bridge'),
+                        __('A linked credit note already exists for this Lexware invoice and cannot be unambiguously assigned to this WooCommerce order. Automatic cancellation was stopped for safety reasons; please check in Lexware.', 'patsch9-accounting-bridge'),
                         array('retryable' => false)
                     );
                 }
@@ -601,7 +601,7 @@ class PATSACBR_API_Client {
             return $line_items;
         }
         if (!$line_items) {
-            return new WP_Error('empty_credit_note', __('Die ursprüngliche Lexware-Rechnung enthält keine Positionen, die sicher gutgeschrieben werden können.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('empty_credit_note', __('The original Lexware invoice contains no line items that can be safely credited.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
         $address = $this->credit_note_address_from_invoice($invoice);
@@ -611,7 +611,7 @@ class PATSACBR_API_Client {
 
         $currency = strtoupper((string) ($invoice['totalPrice']['currency'] ?? ''));
         if ('EUR' !== $currency) {
-            return new WP_Error('unsupported_credit_currency', __('Die ursprüngliche Lexware-Rechnung verwendet keine unterstützte EUR-Währung.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('unsupported_credit_currency', __('The original Lexware invoice does not use the supported EUR currency.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
         $total_price = array('currency' => 'EUR');
         foreach (array('totalDiscountAbsolute', 'totalDiscountPercentage') as $discount_key) {
@@ -626,9 +626,9 @@ class PATSACBR_API_Client {
             'lineItems'     => $line_items,
             'totalPrice'    => $total_price,
             'taxConditions' => $tax_conditions,
-            'title'         => __('Gutschrift / Stornierung', 'patsch9-accounting-bridge'),
+            'title'         => __('Credit note / cancellation', 'patsch9-accounting-bridge'),
             /* translators: %s: Original invoice number or ID */
-            'introduction'  => sprintf(__('Gutschrift zur Rechnung %s', 'patsch9-accounting-bridge'), sanitize_text_field((string) ($invoice['voucherNumber'] ?? $original_invoice_id))),
+            'introduction'  => sprintf(__('Credit note for invoice %s', 'patsch9-accounting-bridge'), sanitize_text_field((string) ($invoice['voucherNumber'] ?? $original_invoice_id))),
         );
         $endpoint = 'credit-notes?precedingSalesVoucherId=' . rawurlencode($original_invoice_id) . '&finalize=true';
         $response = $this->request('POST', $endpoint, $credit_note_data);
@@ -638,7 +638,7 @@ class PATSACBR_API_Client {
         if (empty($response['id']) || !$this->is_valid_uuid((string) $response['id'])) {
             return new WP_Error(
                 'invalid_api_response',
-                __('Lexware hat nach dem Erstellen keine gültige Gutschrifts-ID zurückgegeben. Die Gutschrift könnte trotzdem erstellt worden sein; bitte vor einem erneuten Versuch in Lexware prüfen.', 'patsch9-accounting-bridge'),
+                __('Lexware did not return a valid credit note ID after creation. The credit note may still have been created; please check in Lexware before retrying.', 'patsch9-accounting-bridge'),
                 array('retryable' => false, 'ambiguous_write' => true)
             );
         }
@@ -664,8 +664,8 @@ class PATSACBR_API_Client {
         }
         $order->add_order_note(sprintf(
             /* translators: 1: Credit note number, 2: Credit note ID */
-            __('Lexware Gutschrift erstellt: %1$s (ID: %2$s)', 'patsch9-accounting-bridge'),
-            $credit_note_number ?: __('offen', 'patsch9-accounting-bridge'),
+            __('Lexware credit note created: %1$s (ID: %2$s)', 'patsch9-accounting-bridge'),
+            $credit_note_number ?: __('open', 'patsch9-accounting-bridge'),
             $credit_note_id
         ));
         return $response;
@@ -681,14 +681,14 @@ class PATSACBR_API_Client {
     public function download_invoice_document($invoice_id) {
         $invoice_id = sanitize_text_field((string) $invoice_id);
         if (!$this->is_valid_uuid($invoice_id)) {
-            return new WP_Error('invalid_invoice_id', __('Ungültige Lexware-Rechnungs-ID.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_invoice_id', __('Invalid Lexware invoice ID.', 'patsch9-accounting-bridge'));
         }
         $details = $this->request('GET', 'invoices/' . rawurlencode($invoice_id));
         if (is_wp_error($details)) {
             return $details;
         }
         if ('draft' === strtolower((string) ($details['voucherStatus'] ?? ''))) {
-            return new WP_Error('invoice_is_draft', __('Für einen Lexware-Rechnungsentwurf existiert noch keine versendbare Rechnungsdatei.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invoice_is_draft', __('No invoice document is available for sending a Lexware invoice draft.', 'patsch9-accounting-bridge'));
         }
         $profile = strtoupper((string) ($details['electronicDocumentProfile'] ?? 'NONE'));
         $is_xrechnung = 'XRECHNUNG' === $profile;
@@ -698,7 +698,7 @@ class PATSACBR_API_Client {
             return $binary;
         }
         if (!is_string($binary) || strlen($binary) < 5) {
-            return new WP_Error('invalid_invoice_file', __('Lexware hat keine gültige Rechnungsdatei geliefert.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_invoice_file', __('Lexware did not return a valid invoice document.', 'patsch9-accounting-bridge'));
         }
         if ($is_xrechnung) {
             // XRechnung may use different XML syntaxes/root elements (for example UBL or CII).
@@ -708,13 +708,13 @@ class PATSACBR_API_Client {
             $trimmed = ltrim($binary, "\xEF\xBB\xBF\x00\x09\x0A\x0D\x20");
             $head = strtolower(substr($trimmed, 0, 512));
             if ('' === $trimmed || '<' !== $trimmed[0] || false !== strpos($head, '<html') || false !== strpos($head, '<!doctype html')) {
-                return new WP_Error('invalid_xml', __('Lexware hat keine plausible XRechnung-XML-Datei geliefert.', 'patsch9-accounting-bridge'));
+                return new WP_Error('invalid_xml', __('Lexware did not return a plausible XRechnung XML document.', 'patsch9-accounting-bridge'));
             }
             $extension = 'xml';
             $mime = 'application/xml';
         } else {
             if (0 !== strncmp($binary, '%PDF-', 5)) {
-                return new WP_Error('invalid_pdf', __('Lexware hat keine gültige PDF-Datei geliefert.', 'patsch9-accounting-bridge'));
+                return new WP_Error('invalid_pdf', __('Lexware did not return a valid PDF document.', 'patsch9-accounting-bridge'));
             }
             $extension = 'pdf';
             $mime = 'application/pdf';
@@ -722,18 +722,18 @@ class PATSACBR_API_Client {
 
         $tmp = wp_tempnam('patsacbr-invoice.' . $extension);
         if (!$tmp) {
-            return new WP_Error('temp_file', __('Temporäre Rechnungsdatei konnte nicht angelegt werden.', 'patsch9-accounting-bridge'));
+            return new WP_Error('temp_file', __('The temporary invoice document could not be created.', 'patsch9-accounting-bridge'));
         }
         require_once ABSPATH . 'wp-admin/includes/file.php';
         global $wp_filesystem;
         if (empty($wp_filesystem) && !WP_Filesystem()) {
             wp_delete_file($tmp);
-            return new WP_Error('filesystem', __('WordPress-Dateisystem ist nicht verfügbar.', 'patsch9-accounting-bridge'));
+            return new WP_Error('filesystem', __('The WordPress filesystem is unavailable.', 'patsch9-accounting-bridge'));
         }
         $path = $tmp . '.' . $extension;
         if (!$wp_filesystem->put_contents($path, $binary, 0600)) {
             $wp_filesystem->delete($tmp);
-            return new WP_Error('invoice_write', __('Temporäre Rechnungsdatei konnte nicht geschrieben werden.', 'patsch9-accounting-bridge'));
+            return new WP_Error('invoice_write', __('The temporary invoice document could not be written.', 'patsch9-accounting-bridge'));
         }
         $wp_filesystem->delete($tmp);
         return array('path' => $path, 'mime' => $mime, 'extension' => $extension, 'profile' => $profile);
@@ -749,7 +749,7 @@ class PATSACBR_API_Client {
             if (!empty($document['path']) && file_exists($document['path'])) {
                 wp_delete_file($document['path']);
             }
-            return new WP_Error('xrechnung_requires_xml', __('Diese Rechnung ist eine XRechnung. Die PDF-Darstellung von Lexware ist nur eine Vorschau; die rechtsrelevante Rechnungsdatei ist XML.', 'patsch9-accounting-bridge'));
+            return new WP_Error('xrechnung_requires_xml', __('This invoice is an XRechnung. The PDF rendition provided by Lexware is only a preview; the legally relevant invoice document is XML.', 'patsch9-accounting-bridge'));
         }
         return $document['path'];
     }
@@ -900,7 +900,7 @@ class PATSACBR_API_Client {
                 'type'      => 'custom',
                 'name'      => sanitize_text_field($item->get_name()),
                 'quantity'  => $quantity,
-                'unitName'  => __('Stück', 'patsch9-accounting-bridge'),
+                'unitName'  => __('piece', 'patsch9-accounting-bridge'),
                 'unitPrice' => $unit_price,
             );
         }
@@ -923,10 +923,10 @@ class PATSACBR_API_Client {
                 $formatted_amount = number_format($amount, 2, ',', '.') . ' EUR';
                 $line_items[] = array(
                     'type'        => 'text',
-                    'name'        => __('Kaution – rückzahlbare Sicherheitsleistung', 'patsch9-accounting-bridge'),
+                    'name'        => __('Deposit – refundable security deposit', 'patsch9-accounting-bridge'),
                     'description' => sprintf(
                         /* translators: %s: deposit amount */
-                        __('Zusätzlich zur Rechnungssumme vereinnahmte Kaution: %s. Die Kaution ist keine Gegenleistung für die Miete und wird zurückgezahlt, sofern kein Schaden, Verlust oder vertraglich zu ersetzender Reinigungsaufwand vorliegt.', 'patsch9-accounting-bridge'),
+                        __('Deposit collected in addition to the invoice total: %s. The deposit is not consideration for the rental and will be refunded unless there is damage, loss, or a cleaning charge payable under the contract.', 'patsch9-accounting-bridge'),
                         $formatted_amount
                     ),
                 );
@@ -940,7 +940,7 @@ class PATSACBR_API_Client {
                 'type'      => 'custom',
                 'name'      => sanitize_text_field($fee_item->get_name()),
                 'quantity'  => 1,
-                'unitName'  => __('Pauschal', 'patsch9-accounting-bridge'),
+                'unitName'  => __('flat rate', 'patsch9-accounting-bridge'),
                 'unitPrice' => $unit_price,
             );
         }
@@ -952,9 +952,9 @@ class PATSACBR_API_Client {
             $unit_price['gross' === $tax_type ? 'grossAmount' : 'netAmount'] = round('gross' === $tax_type ? $shipping_gross : $shipping_net, 2);
             $line_items[] = array(
                 'type'      => 'custom',
-                'name'      => __('Versandkosten', 'patsch9-accounting-bridge'),
+                'name'      => __('Shipping costs', 'patsch9-accounting-bridge'),
                 'quantity'  => 1,
-                'unitName'  => __('Pauschal', 'patsch9-accounting-bridge'),
+                'unitName'  => __('flat rate', 'patsch9-accounting-bridge'),
                 'unitPrice' => $unit_price,
             );
         }
@@ -972,9 +972,9 @@ class PATSACBR_API_Client {
             $unit_price['gross' === $tax_type ? 'grossAmount' : 'netAmount'] = -round($amount, 2);
             $items[] = array(
                 'type'      => 'custom',
-                'name'      => __('Einlösung Wertgutschein', 'patsch9-accounting-bridge'),
+                'name'      => __('Gift voucher redemption', 'patsch9-accounting-bridge'),
                 'quantity'  => 1,
-                'unitName'  => __('Pauschal', 'patsch9-accounting-bridge'),
+                'unitName'  => __('flat rate', 'patsch9-accounting-bridge'),
                 'unitPrice' => $unit_price,
             );
         }
@@ -1034,7 +1034,7 @@ class PATSACBR_API_Client {
         $specific_terms = get_option('patsacbr_payment_terms_' . $payment_method, '');
         $terms = !empty($specific_terms)
             ? (string) $specific_terms
-            : (string) get_option('patsacbr_payment_terms', __('Zahlbar innerhalb von 14 Tagen ohne Abzug.', 'patsch9-accounting-bridge'));
+            : (string) get_option('patsacbr_payment_terms', __('Payable within 14 days without deduction.', 'patsch9-accounting-bridge'));
 
         // Optional extension metadata. No dependency on the rental plugin:
         // normal WooCommerce orders simply do not have this value.
@@ -1145,16 +1145,16 @@ private function introduction_contains_order_number($introduction, $order_number
  */
 public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
     if (!$order instanceof WC_Order) {
-        return new WP_Error('invalid_order', __('Ungültige Bestellung für die Lexware-Rechnungssuche.', 'patsch9-accounting-bridge'), array('retryable' => false));
+        return new WP_Error('invalid_order', __('Invalid order for the Lexware invoice search.', 'patsch9-accounting-bridge'), array('retryable' => false));
     }
     if (!$this->is_configured()) {
-        return new WP_Error('no_api_key', __('Kein gültiger API-Key konfiguriert', 'patsch9-accounting-bridge'), array('retryable' => false));
+        return new WP_Error('no_api_key', __('No valid API key configured', 'patsch9-accounting-bridge'), array('retryable' => false));
     }
 
     $created = $order->get_date_created();
     $order_number = trim((string) $order->get_order_number());
     if (!$created || '' === $order_number) {
-        return new WP_Error('missing_order_reference', __('Die Bestellung besitzt keine auswertbare Bestellnummer oder kein Erstellungsdatum.', 'patsch9-accounting-bridge'), array('retryable' => false));
+        return new WP_Error('missing_order_reference', __('The order has no usable order number or creation date.', 'patsch9-accounting-bridge'), array('retryable' => false));
     }
 
     $order_total = round((float) $order->get_total(), 2);
@@ -1190,7 +1190,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             return $list;
         }
         if (!isset($list['content']) || !is_array($list['content'])) {
-            return new WP_Error('invalid_voucherlist_response', __('Lexware hat bei der historischen Rechnungssuche keine gültige Belegliste geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+            return new WP_Error('invalid_voucherlist_response', __('Lexware did not return a valid document list during the historical invoice search.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
         }
 
         foreach ($list['content'] as $candidate) {
@@ -1203,7 +1203,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
 
             $invoice_id = sanitize_text_field((string) ($candidate['id'] ?? ''));
             if (!$this->is_valid_uuid($invoice_id)) {
-                return new WP_Error('invalid_invoice_search_id', __('Lexware hat bei der historischen Rechnungssuche eine ungültige Rechnungs-ID geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+                return new WP_Error('invalid_invoice_search_id', __('Lexware returned an invalid invoice ID during the historical invoice search.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
             }
 
             $details = $this->request('GET', 'invoices/' . rawurlencode($invoice_id));
@@ -1211,7 +1211,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
                 return $details;
             }
             if (!isset($details['totalPrice']['totalGrossAmount'])) {
-                return new WP_Error('invalid_invoice_search_response', __('Lexware hat bei der historischen Rechnungssuche unvollständige Rechnungsdaten geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+                return new WP_Error('invalid_invoice_search_response', __('Lexware returned incomplete invoice data during the historical invoice search.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
             }
             if (abs(round((float) $details['totalPrice']['totalGrossAmount'], 2) - $order_total) > 0.02) {
                 continue;
@@ -1222,14 +1222,14 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
 
             $details_id = sanitize_text_field((string) ($details['id'] ?? ''));
             if (!$this->is_valid_uuid($details_id) || $details_id !== $invoice_id) {
-                return new WP_Error('invoice_identity_mismatch', __('Lexware hat widersprüchliche Rechnungsdaten geliefert. Die Bestellung wurde nicht automatisch verknüpft.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+                return new WP_Error('invoice_identity_mismatch', __('Lexware returned inconsistent invoice data. The order was not linked automatically.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
             }
             $matches[$invoice_id] = $details;
         }
 
         $total_pages = isset($list['totalPages']) ? absint($list['totalPages']) : 1;
         if ($total_pages > $max_pages) {
-            return new WP_Error('invoice_search_too_broad', __('Der Lexware-Suchzeitraum enthält zu viele Rechnungen für einen sicheren automatischen Abgleich. Bitte die Bestellung manuell prüfen oder den Suchzeitraum per Filter einschränken.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+            return new WP_Error('invoice_search_too_broad', __('The Lexware search period contains too many invoices for safe automatic reconciliation. Please review the order manually or narrow the search period using a filter.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
         }
         $page++;
     } while ($page < $total_pages);
@@ -1243,7 +1243,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
     foreach ($matches as $invoice_id => $invoice) {
         $status = strtolower((string) ($invoice['voucherStatus'] ?? ''));
         if ('draft' === $status) {
-            return new WP_Error('draft_invoice_match', __('Zu dieser Bestellung wurde in Lexware ein passender Rechnungsentwurf gefunden. Aus Schutz vor Doppelbelegen ist eine manuelle Prüfung erforderlich.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+            return new WP_Error('draft_invoice_match', __('A matching invoice draft was found in Lexware for this order. Manual review is required to prevent duplicate documents.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
         }
         if ('voided' === $status) {
             $voided[$invoice_id] = $invoice;
@@ -1262,21 +1262,21 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
         return reset($matches);
     }
 
-    return new WP_Error('ambiguous_invoice_match', __('In Lexware wurden mehrere Rechnungen gefunden, die Bestellnummer und Gesamtbetrag dieser Bestellung enthalten. Es wurde keine automatische Zuordnung vorgenommen.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
+    return new WP_Error('ambiguous_invoice_match', __('Multiple invoices matching this order number and total amount were found in Lexware. No automatic link was created.', 'patsch9-accounting-bridge'), array('retryable' => false, 'manual_check' => true));
 }
 
     private function request($method, $endpoint, $data = null, $raw_response = false, $accept = null) {
         if (empty($this->api_key)) {
-            return new WP_Error('no_api_key', __('Kein gültiger API-Key konfiguriert', 'patsch9-accounting-bridge'));
+            return new WP_Error('no_api_key', __('No valid API key configured', 'patsch9-accounting-bridge'));
         }
         $method = strtoupper((string) $method);
         if (!in_array($method, array('GET', 'POST', 'PUT', 'DELETE'), true)) {
-            return new WP_Error('invalid_method', __('Ungültige API-Methode', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_method', __('Invalid API method', 'patsch9-accounting-bridge'));
         }
         $endpoint = ltrim((string) $endpoint, '/');
         // Endpoint is constructed internally only. Reject schemes, traversal and control characters.
         if ('' === $endpoint || false !== strpos($endpoint, '..') || preg_match('#^[a-z][a-z0-9+.-]*://#i', $endpoint) || preg_match('/[\x00-\x1F\x7F]/', $endpoint)) {
-            return new WP_Error('invalid_endpoint', __('Ungültiger API-Endpunkt', 'patsch9-accounting-bridge'));
+            return new WP_Error('invalid_endpoint', __('Invalid API endpoint', 'patsch9-accounting-bridge'));
         }
 
         $this->enforce_rate_limit();
@@ -1295,7 +1295,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
         if (null !== $data && in_array($method, array('POST', 'PUT'), true)) {
             $encoded = wp_json_encode($data);
             if (false === $encoded) {
-                return new WP_Error('json_encode', __('API-Daten konnten nicht serialisiert werden.', 'patsch9-accounting-bridge'));
+                return new WP_Error('json_encode', __('API data could not be serialized.', 'patsch9-accounting-bridge'));
             }
             $args['body'] = $encoded;
         }
@@ -1305,10 +1305,10 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             $response = wp_safe_remote_request($url, $args);
             if (is_wp_error($response)) {
                 $retryable = 'POST' !== $method;
-                $this->log_error('API Transport Error', $response->get_error_message(), array('endpoint' => $endpoint, 'method' => $method));
-                $transport_message = __('Die Verbindung zur Lexware API ist fehlgeschlagen.', 'patsch9-accounting-bridge');
+                $this->log_error(__('API transport error', 'patsch9-accounting-bridge'), $response->get_error_message(), array('endpoint' => $endpoint, 'method' => $method));
+                $transport_message = __('The connection to the Lexware API failed.', 'patsch9-accounting-bridge');
                 if ('POST' === $method) {
-                    $transport_message .= ' ' . __('Der Schreibvorgang wird nicht automatisch wiederholt, weil er serverseitig bereits erfolgt sein könnte. Bitte in Lexware prüfen.', 'patsch9-accounting-bridge');
+                    $transport_message .= ' ' . __('The write operation will not be retried automatically because it may already have completed on the server. Please check in Lexware.', 'patsch9-accounting-bridge');
                 }
                 return new WP_Error(
                     'patsacbr_api_transport',
@@ -1338,7 +1338,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
                 $message = sanitize_text_field((string) $decoded['message']);
             } else {
                 /* translators: %d: HTTP status code returned by the Lexware Office API. */
-                $message = sprintf(__('Lexware API Fehler (HTTP %d)', 'patsch9-accounting-bridge'), $status);
+                $message = sprintf(__('Lexware API error (HTTP %d)', 'patsch9-accounting-bridge'), $status);
             }
             $message = function_exists('mb_substr') ? mb_substr($message, 0, 500) : substr($message, 0, 500);
             // A 429 explicitly means the write was rejected and is safe to retry.
@@ -1346,9 +1346,9 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             // the remote side may already have created a voucher.
             $retryable = 429 === $status || ('POST' !== $method && $status >= 500 && $status <= 599);
             if ('POST' === $method && $status >= 500) {
-                $message .= ' ' . __('Der Schreibvorgang wird nicht automatisch wiederholt, weil Lexware ihn trotz Fehler bereits verarbeitet haben könnte. Bitte vor erneutem Senden in Lexware prüfen.', 'patsch9-accounting-bridge');
+                $message .= ' ' . __('The write operation will not be retried automatically because Lexware may already have processed it despite the error. Please check in Lexware before sending again.', 'patsch9-accounting-bridge');
             }
-            $this->log_error('API Error', $message, array('status' => $status, 'endpoint' => $endpoint, 'method' => $method));
+            $this->log_error(__('API error', 'patsch9-accounting-bridge'), $message, array('status' => $status, 'endpoint' => $endpoint, 'method' => $method));
             return new WP_Error('patsacbr_api_http', $message, array('status' => $status, 'retryable' => $retryable, 'ambiguous_write' => ('POST' === $method && $status >= 500)));
         }
         if ($raw_response) {
@@ -1358,7 +1358,7 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             if ('POST' === $method) {
                 return new WP_Error(
                     'patsacbr_api_ambiguous_response',
-                    __('Lexware hat den Schreibvorgang mit Erfolg bestätigt, aber keinen auswertbaren Antwortkörper geliefert. Der Datensatz könnte bereits erstellt worden sein; bitte vor einem erneuten Versuch in Lexware prüfen.', 'patsch9-accounting-bridge'),
+                    __('Lexware confirmed the write operation succeeded but did not return a usable response body. The record may already have been created; please check in Lexware before retrying.', 'patsch9-accounting-bridge'),
                     array('status' => $status, 'retryable' => false, 'ambiguous_write' => true)
                 );
             }
@@ -1369,8 +1369,8 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             return new WP_Error(
                 'invalid_json',
                 'POST' === $method
-                    ? __('Lexware hat nach einem Schreibvorgang eine ungültige JSON-Antwort geliefert. Der Datensatz könnte bereits erstellt worden sein; bitte vor einem erneuten Versuch in Lexware prüfen.', 'patsch9-accounting-bridge')
-                    : __('Lexware hat eine ungültige JSON-Antwort geliefert.', 'patsch9-accounting-bridge'),
+                    ? __('Lexware returned an invalid JSON response after a write operation. The record may already have been created; please check in Lexware before retrying.', 'patsch9-accounting-bridge')
+                    : __('Lexware returned an invalid JSON response.', 'patsch9-accounting-bridge'),
                 array('status' => $status, 'retryable' => false, 'ambiguous_write' => ('POST' === $method))
             );
         }
@@ -1432,7 +1432,21 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
         if (get_option('patsacbr_email_on_error', 'yes') === 'yes') {
             $admin_email = get_option('admin_email');
             if (is_email($admin_email)) {
-                wp_mail($admin_email,'[Patsch9 Accounting Bridge] Fehler',sprintf("Fehler: %s\n\nNachricht: %s\n\nZeit: %s", $this->redact_log_string($title), $this->redact_log_string($message), current_time('mysql')));
+                wp_mail(
+                    $admin_email,
+                    __('[Patsch9 Accounting Bridge] Error', 'patsch9-accounting-bridge'),
+                    sprintf(
+                        /* translators: 1: Error title, 2: Error message, 3: Local timestamp. */
+                        __('Error: %1$s
+
+Message: %2$s
+
+Time: %3$s', 'patsch9-accounting-bridge'),
+                        $this->redact_log_string($title),
+                        $this->redact_log_string($message),
+                        current_time('mysql')
+                    )
+                );
             }
         }
     }

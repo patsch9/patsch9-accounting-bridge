@@ -6,6 +6,16 @@ Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONI
 
 Keine Änderungen.
 
+## 2026.10.4 – Noch nicht veröffentlicht
+
+- Englische Originaltexte für Administration, Kundenbereich, E-Mails, API-Fehler und Bestellnotizen.
+- Vollständige deutsche `de_DE`-Übersetzung als PO/MO-Dateien im Plugin; Sprachdateien werden ab `init` berücksichtigt.
+- POT-Datei vollständig mit WP-CLI aus dem Quellcode generiert, einschließlich Pluralformen und Plugin-Metadaten.
+- Rechnungsvorgaben bei Neuinstallationen und fehlenden Einstellungen übersetzbar; gespeicherte Texte bleiben unverändert.
+- Standard-Betreff und Standard-Überschrift von Rechnungs-E-Mails bleiben zur Versandzeit übersetzbar.
+- Übersetzte Bestätigungstexte werden als HTML-Datenattribute verarbeitet, nicht als eingebetteter JavaScript-Code.
+- Übersetzungsablauf und verbleibende Freigabeschritte auf WordPress.org dokumentiert.
+
 ## 2026.10.3 – Noch nicht veröffentlicht
 
 - WordPress.org-Review: Admin-JavaScript und CSS über WordPress-Enqueue-APIs eingebunden.

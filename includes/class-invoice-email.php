@@ -19,8 +19,8 @@ class PATSACBR_Invoice_Email extends WC_Email {
     public function __construct() {
         $this->id = 'patsacbr_invoice';
         $this->customer_email = true;
-        $this->title = __('Lexware Rechnung', 'patsch9-accounting-bridge');
-        $this->description = __('E-Mail mit der Lexware-Rechnungsdatei als Anhang (PDF bzw. XRechnung-XML)', 'patsch9-accounting-bridge');
+        $this->title = __('Lexware invoice', 'patsch9-accounting-bridge');
+        $this->description = __('Email with the Lexware invoice document attached (PDF or XRechnung XML)', 'patsch9-accounting-bridge');
         $this->template_html = 'emails/customer-invoice.php';
         $this->template_plain = 'emails/plain/customer-invoice.php';
         $this->template_base = PATSACBR_PLUGIN_DIR . 'templates/';
@@ -33,11 +33,12 @@ class PATSACBR_Invoice_Email extends WC_Email {
     }
 
     public function get_default_subject() {
-        return __('Ihre Rechnung für Bestellung {order_number}', 'patsch9-accounting-bridge');
+        /* translators: {order_number} is a WooCommerce placeholder. Keep it unchanged. */
+        return __('Your invoice for order {order_number}', 'patsch9-accounting-bridge');
     }
 
     public function get_default_heading() {
-        return __('Rechnung für Ihre Bestellung', 'patsch9-accounting-bridge');
+        return __('Invoice for your order', 'patsch9-accounting-bridge');
     }
 
     public function trigger($order_id, $order = null) {
@@ -67,10 +68,10 @@ class PATSACBR_Invoice_Email extends WC_Email {
         $api_client = new PATSACBR_API_Client();
         $document = $api_client->download_invoice_document($invoice_id);
         if (is_wp_error($document) || empty($document['path']) || !file_exists($document['path'])) {
-            $message = is_wp_error($document) ? $document->get_error_message() : __('Rechnungsdatei konnte nicht vorbereitet werden.', 'patsch9-accounting-bridge');
+            $message = is_wp_error($document) ? $document->get_error_message() : __('The invoice document could not be prepared.', 'patsch9-accounting-bridge');
             $order->add_order_note(sprintf(
                 /* translators: %s: error message */
-                __('Rechnungs-E-Mail nicht versendet: %s', 'patsch9-accounting-bridge'),
+                __('Invoice email not sent: %s', 'patsch9-accounting-bridge'),
                 sanitize_text_field($message)
             ));
             $this->restore_locale();

@@ -64,7 +64,7 @@ class PATSACBR_Admin_Settings {
             add_settings_error(
                 'patsacbr_messages',
                 'patsacbr_invalid_api_key',
-                esc_html__('Der Lexware API-Key hat ein ungültiges Format. Der bisherige Key wurde beibehalten.', 'patsch9-accounting-bridge'),
+                esc_html__('The Lexware API key has an invalid format. The previous key has been retained.', 'patsch9-accounting-bridge'),
                 'error'
             );
             return (string)$old_value;
@@ -213,7 +213,7 @@ class PATSACBR_Admin_Settings {
             add_settings_error(
                 'patsacbr_messages',
                 'patsacbr_message',
-                esc_html__('Einstellungen gespeichert', 'patsch9-accounting-bridge'),
+                esc_html__('Settings saved', 'patsch9-accounting-bridge'),
                 'updated'
             );
         }
@@ -227,13 +227,13 @@ class PATSACBR_Admin_Settings {
             <h1><?php esc_html_e('Patsch9 Accounting Bridge', 'patsch9-accounting-bridge'); ?></h1>
             <h2 class="nav-tab-wrapper">
                 <a href="?page=patsacbr-settings&tab=api" class="nav-tab <?php echo $active_tab === 'api' ? 'nav-tab-active' : ''; ?>">
-                    <?php esc_html_e('API-Konfiguration', 'patsch9-accounting-bridge'); ?>
+                    <?php esc_html_e('API configuration', 'patsch9-accounting-bridge'); ?>
                 </a>
                 <a href="?page=patsacbr-settings&tab=invoice" class="nav-tab <?php echo $active_tab === 'invoice' ? 'nav-tab-active' : ''; ?>">
-                    <?php esc_html_e('Rechnungseinstellungen', 'patsch9-accounting-bridge'); ?>
+                    <?php esc_html_e('Invoice settings', 'patsch9-accounting-bridge'); ?>
                 </a>
                 <a href="?page=patsacbr-settings&tab=sync" class="nav-tab <?php echo $active_tab === 'sync' ? 'nav-tab-active' : ''; ?>">
-                    <?php esc_html_e('Synchronisation', 'patsch9-accounting-bridge'); ?>
+                    <?php esc_html_e('Synchronization', 'patsch9-accounting-bridge'); ?>
                 </a>
                 <a href="?page=patsacbr-settings&tab=logs" class="nav-tab <?php echo $active_tab === 'logs' ? 'nav-tab-active' : ''; ?>">
                     <?php esc_html_e('Logs & Queue', 'patsch9-accounting-bridge'); ?>
@@ -284,8 +284,8 @@ class PATSACBR_Admin_Settings {
                 </th>
                 <td>
                     <?php if ($api_key_from_constant): ?>
-                        <p><strong><?php esc_html_e('API-Key wird über wp-config.php bereitgestellt.', 'patsch9-accounting-bridge'); ?></strong></p>
-                        <p class="description"><?php esc_html_e('Der Key wird dadurch nicht in der WordPress-Datenbank gespeichert und kann hier nicht geändert werden.', 'patsch9-accounting-bridge'); ?></p>
+                        <p><strong><?php esc_html_e('The API key is provided through wp-config.php.', 'patsch9-accounting-bridge'); ?></strong></p>
+                        <p class="description"><?php esc_html_e('The key is therefore not stored in the WordPress database and cannot be changed here.', 'patsch9-accounting-bridge'); ?></p>
                     <?php else: ?>
                         <div style="position: relative; display: inline-block; width: 100%; max-width: 500px;">
                             <input type="password"
@@ -293,32 +293,32 @@ class PATSACBR_Admin_Settings {
                                    name="patsacbr_api_key"
                                    value=""
                                    class="regular-text"
-                                   placeholder="<?php echo esc_attr($api_key ? esc_html__('Gespeichert – leer lassen, um nicht zu ändern', 'patsch9-accounting-bridge') : esc_html__('API-Schlüssel eingeben', 'patsch9-accounting-bridge')); ?>"
+                                   placeholder="<?php echo esc_attr($api_key ? esc_html__('Saved – leave blank to keep the current value', 'patsch9-accounting-bridge') : esc_html__('Enter API key', 'patsch9-accounting-bridge')); ?>"
                                    autocomplete="off"
                                    spellcheck="false"
                                    style="font-family: monospace; letter-spacing: 1px; padding-right: 45px; width: 100%;">
                             <button type="button"
                                     class="button button-secondary patsacbr-toggle-api-key"
                                     style="position: absolute; right: 5px; top: 1px; height: 28px; padding: 0 8px;"
-                                    title="<?php esc_attr_e('API-Key anzeigen/verbergen', 'patsch9-accounting-bridge'); ?>">
+                                    title="<?php esc_attr_e('Show/hide API key', 'patsch9-accounting-bridge'); ?>">
                                 <span class="dashicons dashicons-visibility" style="line-height: 28px;"></span>
                             </button>
                         </div>
                         <p class="description" style="margin-top: 8px;">
-                            <?php echo esc_html($api_key ? esc_html__('Ein API-Key ist gespeichert. Gib einen neuen ein, um ihn zu ersetzen – leer lassen, um nichts zu ändern.', 'patsch9-accounting-bridge') : esc_html__('Bitte API-Key speichern.', 'patsch9-accounting-bridge')); ?>
-                            <?php esc_html_e(' Für höhere Sicherheit kann PATSACBR_LEXWARE_API_KEY in wp-config.php gesetzt werden.', 'patsch9-accounting-bridge'); ?>
+                            <?php echo esc_html($api_key ? esc_html__('An API key is saved. Enter a new key to replace it, or leave blank to keep it.', 'patsch9-accounting-bridge') : esc_html__('Please save an API key.', 'patsch9-accounting-bridge')); ?>
+                            <?php esc_html_e(' For improved security, set PATSACBR_LEXWARE_API_KEY in wp-config.php.', 'patsch9-accounting-bridge'); ?>
                         </p>
                     <?php endif; ?>
                     <p class="description" style="margin-top: 8px;">
                         <a href="https://app.lexware.de/settings/#/public-api" target="_blank" rel="noopener">
-                            <?php esc_html_e('API Key in Lexware erstellen', 'patsch9-accounting-bridge'); ?>
+                            <?php esc_html_e('Create an API key in Lexware', 'patsch9-accounting-bridge'); ?>
                         </a>
                     </p>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label><?php esc_html_e('Rechnungen erstellen bei Status', 'patsch9-accounting-bridge'); ?></label>
+                    <label><?php esc_html_e('Create invoices for order statuses', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <?php
@@ -342,14 +342,14 @@ class PATSACBR_Admin_Settings {
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_retry_attempts"><?php esc_html_e('Wiederholungsversuche', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_retry_attempts"><?php esc_html_e('Retry attempts', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <input type="number" id="patsacbr_retry_attempts" name="patsacbr_retry_attempts"
                            value="<?php echo esc_attr(get_option('patsacbr_retry_attempts', '3')); ?>"
                            min="0" max="10" class="small-text">
                     <p class="description">
-                        <?php esc_html_e('Anzahl der automatischen Wiederholungsversuche bei API-Fehlern', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Number of automatic retry attempts after API errors', 'patsch9-accounting-bridge'); ?>
                     </p>
                 </td>
             </tr>
@@ -362,37 +362,37 @@ class PATSACBR_Admin_Settings {
         <table class="form-table">
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_invoice_title"><?php esc_html_e('Rechnungstitel', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_invoice_title"><?php esc_html_e('Invoice title', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <input type="text" id="patsacbr_invoice_title" name="patsacbr_invoice_title"
-                           value="<?php echo esc_attr(get_option('patsacbr_invoice_title', 'Rechnung')); ?>"
+                           value="<?php echo esc_attr(get_option('patsacbr_invoice_title', __('Invoice', 'patsch9-accounting-bridge'))); ?>"
                            class="regular-text">
-                    <p class="description">Shortcodes: [order_number], [order_date], [customer_name]</p>
+                    <p class="description"><?php esc_html_e('Placeholders:', 'patsch9-accounting-bridge'); ?> [order_number], [order_date], [customer_name]</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_invoice_introduction"><?php esc_html_e('Einleitungstext', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_invoice_introduction"><?php esc_html_e('Introduction', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <textarea id="patsacbr_invoice_introduction" name="patsacbr_invoice_introduction"
-                              rows="3" class="large-text"><?php echo esc_textarea(get_option('patsacbr_invoice_introduction', 'Vielen Dank für Ihre Bestellung [order_number] vom [order_date].')); ?></textarea>
-                    <p class="description">Shortcodes: [order_number], [order_date], [customer_name], [customer_company], [total], [payment_method]</p>
+                              rows="3" class="large-text"><?php echo esc_textarea(get_option('patsacbr_invoice_introduction', __('Thank you for your order [order_number] dated [order_date].', 'patsch9-accounting-bridge'))); ?></textarea>
+                    <p class="description"><?php esc_html_e('Placeholders:', 'patsch9-accounting-bridge'); ?> [order_number], [order_date], [customer_name], [customer_company], [total], [payment_method]</p>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_payment_terms"><?php esc_html_e('Standard Zahlungsbedingungen', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_payment_terms"><?php esc_html_e('Default payment terms', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <textarea id="patsacbr_payment_terms" name="patsacbr_payment_terms"
-                              rows="3" class="large-text"><?php echo esc_textarea(get_option('patsacbr_payment_terms', 'Zahlbar innerhalb von 14 Tagen ohne Abzug.')); ?></textarea>
+                              rows="3" class="large-text"><?php echo esc_textarea(get_option('patsacbr_payment_terms', __('Payable within 14 days without deduction.', 'patsch9-accounting-bridge'))); ?></textarea>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_payment_due_days"><?php esc_html_e('Standard Zahlungsziel (Tage)', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_payment_due_days"><?php esc_html_e('Default payment due date (days)', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <input type="number" id="patsacbr_payment_due_days" name="patsacbr_payment_due_days"
@@ -402,22 +402,22 @@ class PATSACBR_Admin_Settings {
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_closing_text"><?php esc_html_e('Schlusstext', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_closing_text"><?php esc_html_e('Closing text', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <textarea id="patsacbr_closing_text" name="patsacbr_closing_text"
-                              rows="3" class="large-text"><?php echo esc_textarea(get_option('patsacbr_closing_text', 'Vielen Dank für Ihr Vertrauen.')); ?></textarea>
+                              rows="3" class="large-text"><?php echo esc_textarea(get_option('patsacbr_closing_text', __('Thank you for your trust.', 'patsch9-accounting-bridge'))); ?></textarea>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_finalize_immediately"><?php esc_html_e('Rechnungen sofort abschließen', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_finalize_immediately"><?php esc_html_e('Finalize invoices immediately', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_finalize_immediately" name="patsacbr_finalize_immediately"
                                value="yes" <?php checked(get_option('patsacbr_finalize_immediately', 'yes'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Rechnungen direkt im Status "open" erstellen', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, create invoices directly with the "open" status', 'patsch9-accounting-bridge'); ?>
                     </label>
                 </td>
             </tr>
@@ -439,16 +439,16 @@ class PATSACBR_Admin_Settings {
         }
         ?>
         <hr style="margin: 30px 0;">
-        <h3>💳 <?php esc_html_e('Zahlungsmethoden-spezifische Einstellungen', 'patsch9-accounting-bridge'); ?></h3>
+        <h3>💳 <?php esc_html_e('Payment method settings', 'patsch9-accounting-bridge'); ?></h3>
         <p class="description">
-            <?php esc_html_e('Konfiguriere individuelle Zahlungsbedingungen für jede Zahlungsmethode. Leer = Standard-Einstellungen verwenden.', 'patsch9-accounting-bridge'); ?>
+            <?php esc_html_e('Configure individual payment terms for each payment method. Leave blank to use the default settings.', 'patsch9-accounting-bridge'); ?>
         </p>
         <table class="wp-list-table widefat fixed striped" style="margin-top: 20px;">
             <thead>
                 <tr>
-                    <th style="width: 200px;"><?php esc_html_e('Zahlungsmethode', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Zahlungsbedingungen', 'patsch9-accounting-bridge'); ?></th>
-                    <th style="width: 120px;"><?php esc_html_e('Zahlungsziel (Tage)', 'patsch9-accounting-bridge'); ?></th>
+                    <th style="width: 200px;"><?php esc_html_e('Payment method', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Payment terms', 'patsch9-accounting-bridge'); ?></th>
+                    <th style="width: 120px;"><?php esc_html_e('Payment due date (days)', 'patsch9-accounting-bridge'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -470,7 +470,7 @@ class PATSACBR_Admin_Settings {
                                    name="patsacbr_payment_terms_<?php echo esc_attr($gateway_id); ?>"
                                    value="<?php echo esc_attr($payment_terms); ?>"
                                    class="widefat"
-                                   placeholder="<?php echo esc_attr($default_terms ?: 'Standard verwenden'); ?>">
+                                   placeholder="<?php echo esc_attr($default_terms ?: __('Use default', 'patsch9-accounting-bridge')); ?>">
                         </td>
                         <td>
                             <input type="number"
@@ -485,7 +485,7 @@ class PATSACBR_Admin_Settings {
             </tbody>
         </table>
         <p class="description" style="margin-top: 10px;">
-            💡 <strong>Beispiele:</strong> PayPal: "Bereits bezahlt per PayPal" + 0 Tage | Rechnung: "Zahlbar innerhalb von 14 Tagen" + 14 Tage
+            💡 <strong><?php esc_html_e('Examples:', 'patsch9-accounting-bridge'); ?></strong> <?php esc_html_e('PayPal: "Already paid via PayPal" + 0 days | Invoice: "Payable within 14 days" + 14 days', 'patsch9-accounting-bridge'); ?>
         </p>
         <?php
     }
@@ -495,92 +495,92 @@ class PATSACBR_Admin_Settings {
         <table class="form-table">
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_auto_sync_contacts"><?php esc_html_e('Kontakte automatisch synchronisieren', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_auto_sync_contacts"><?php esc_html_e('Synchronize contacts automatically', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_auto_sync_contacts" name="patsacbr_auto_sync_contacts"
                                value="yes" <?php checked(get_option('patsacbr_auto_sync_contacts', 'yes'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Kundendaten automatisch in Lexware erstellen/aktualisieren', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, create/update customer data in Lexware automatically', 'patsch9-accounting-bridge'); ?>
                     </label>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_show_in_customer_area"><?php esc_html_e('Rechnungen im Kundenbereich anzeigen', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_show_in_customer_area"><?php esc_html_e('Show invoices in the customer account', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_show_in_customer_area" name="patsacbr_show_in_customer_area"
                                value="yes" <?php checked(get_option('patsacbr_show_in_customer_area', 'yes'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Rechnungs-PDFs im "Mein Konto"-Bereich anzeigen', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, show invoice PDFs in the "My Account" area', 'patsch9-accounting-bridge'); ?>
                     </label>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_shipping_as_line_item"><?php esc_html_e('Versandkosten als Position', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_shipping_as_line_item"><?php esc_html_e('Shipping costs as a line item', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_shipping_as_line_item" name="patsacbr_shipping_as_line_item"
                                value="yes" <?php checked(get_option('patsacbr_shipping_as_line_item', 'yes'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Versandkosten als separate Rechnungsposition übertragen', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, transfer shipping costs as a separate invoice line item', 'patsch9-accounting-bridge'); ?>
                     </label>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_enable_logging"><?php esc_html_e('Logging aktivieren', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_enable_logging"><?php esc_html_e('Enable logging', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_enable_logging" name="patsacbr_enable_logging"
                                value="yes" <?php checked(get_option('patsacbr_enable_logging', 'no'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, API-Aufrufe und Fehler protokollieren', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, log API requests and errors', 'patsch9-accounting-bridge'); ?>
                     </label>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_email_on_error"><?php esc_html_e('E-Mail bei Fehlern', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_email_on_error"><?php esc_html_e('Email on errors', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_email_on_error" name="patsacbr_email_on_error"
                                value="yes" <?php checked(get_option('patsacbr_email_on_error', 'yes'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Admin per E-Mail über Fehler benachrichtigen', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, notify the administrator of errors by email', 'patsch9-accounting-bridge'); ?>
                     </label>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_auto_send_email"><?php esc_html_e('Rechnung automatisch per E-Mail versenden', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_auto_send_email"><?php esc_html_e('Email invoices automatically', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="checkbox" id="patsacbr_auto_send_email" name="patsacbr_auto_send_email"
                                value="yes" <?php checked(get_option('patsacbr_auto_send_email', 'no'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Rechnung automatisch nach Erstellung per E-Mail an Kunden senden', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, email invoices to customers automatically after creation', 'patsch9-accounting-bridge'); ?>
                     </label>
                     <p class="description">
-                        <?php esc_html_e('Die E-Mail-Vorlage kann unter WooCommerce → Einstellungen → E-Mails angepasst werden.', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('The email template can be customized under WooCommerce → Settings → Emails.', 'patsch9-accounting-bridge'); ?>
                     </p>
                 </td>
             </tr>
             <tr>
                 <th scope="row">
-                    <label for="patsacbr_delete_data_on_uninstall"><?php esc_html_e('Daten bei Deinstallation löschen', 'patsch9-accounting-bridge'); ?></label>
+                    <label for="patsacbr_delete_data_on_uninstall"><?php esc_html_e('Delete data on uninstall', 'patsch9-accounting-bridge'); ?></label>
                 </th>
                 <td>
                     <label>
                         <input type="hidden" name="patsacbr_delete_data_on_uninstall" value="no">
                         <input type="checkbox" id="patsacbr_delete_data_on_uninstall" name="patsacbr_delete_data_on_uninstall"
                                value="yes" <?php checked(get_option('patsacbr_delete_data_on_uninstall', 'no'), 'yes'); ?>>
-                        <?php esc_html_e('Ja, Plugin-Einstellungen, Queue-Daten und Lexware-Verknüpfungsmetadaten beim Löschen des Plugins dauerhaft entfernen.', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Yes, permanently remove plugin settings, queue data, and Lexware linking metadata when deleting the plugin.', 'patsch9-accounting-bridge'); ?>
                     </label>
                     <p class="description">
-                        <?php esc_html_e('Standardmäßig bleiben die Daten erhalten. Das schützt bestehende Rechnungs- und Gutschriftszuordnungen bei einer versehentlichen Deinstallation oder Neuinstallation.', 'patsch9-accounting-bridge'); ?>
+                        <?php esc_html_e('Data is retained by default. This protects existing invoice and credit note links in case of accidental uninstallation or reinstallation.', 'patsch9-accounting-bridge'); ?>
                     </p>
                 </td>
             </tr>
@@ -590,7 +590,7 @@ class PATSACBR_Admin_Settings {
 
     public function handle_process_queue_now() {
         if (!current_user_can('manage_woocommerce')) {
-            wp_die(esc_html__('Keine Berechtigung.', 'patsch9-accounting-bridge'), '', array('response' => 403));
+            wp_die(esc_html__('Permission denied.', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
         check_admin_referer('patsacbr_process_queue_now');
 
@@ -605,7 +605,7 @@ class PATSACBR_Admin_Settings {
 
     public function handle_clear_queue_now() {
         if (!current_user_can('manage_woocommerce')) {
-            wp_die(esc_html__('Keine Berechtigung.', 'patsch9-accounting-bridge'), '', array('response' => 403));
+            wp_die(esc_html__('Permission denied.', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
         check_admin_referer('patsacbr_clear_queue_now');
 
@@ -635,7 +635,7 @@ class PATSACBR_Admin_Settings {
 
     public function handle_release_manual_check() {
         if (!current_user_can('manage_woocommerce')) {
-            wp_die(esc_html__('Keine Berechtigung.', 'patsch9-accounting-bridge'), '', array('response' => 403));
+            wp_die(esc_html__('Permission denied.', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
         $item_id = isset($_POST['item_id']) ? absint(wp_unslash($_POST['item_id'])) : 0;
         check_admin_referer('patsacbr_release_manual_check_' . $item_id);
@@ -657,50 +657,50 @@ class PATSACBR_Admin_Settings {
         $queue_items = PATSACBR_Queue_Handler::get_queue_status();
         $error_logs = get_option('patsacbr_error_logs', array());
         ?>
-        <h2><?php esc_html_e('Queue-Status', 'patsch9-accounting-bridge'); ?></h2>
+        <h2><?php esc_html_e('Queue status', 'patsch9-accounting-bridge'); ?></h2>
         <div style="display:flex;gap:8px;align-items:center;margin:1em 0;">
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;">
                 <input type="hidden" name="action" value="patsacbr_process_queue_now">
                 <?php wp_nonce_field('patsacbr_process_queue_now'); ?>
-                <button type="submit" class="button button-primary"><?php esc_html_e('Queue jetzt verarbeiten', 'patsch9-accounting-bridge'); ?></button>
+                <button type="submit" class="button button-primary"><?php esc_html_e('Process queue now', 'patsch9-accounting-bridge'); ?></button>
             </form>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;" onsubmit="return confirm('<?php esc_attr_e('Alle pending und failed Queue-Items wirklich löschen?', 'patsch9-accounting-bridge'); ?>');">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;" data-patsacbr-confirm="<?php esc_attr_e('Really delete all pending and failed queue items?', 'patsch9-accounting-bridge'); ?>">
                 <input type="hidden" name="action" value="patsacbr_clear_queue_now">
                 <?php wp_nonce_field('patsacbr_clear_queue_now'); ?>
-                <button type="submit" class="button button-secondary"><?php esc_html_e('Queue leeren', 'patsch9-accounting-bridge'); ?></button>
+                <button type="submit" class="button button-secondary"><?php esc_html_e('Clear queue', 'patsch9-accounting-bridge'); ?></button>
             </form>
         </div>
         <?php
         $queue_notice = isset($_GET['patsacbr_queue_notice']) ? sanitize_key(wp_unslash($_GET['patsacbr_queue_notice'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only redirect status.
         if ('processed' === $queue_notice) {
-            echo '<div class="notice notice-success"><p>' . esc_html__('Queue-Item erfolgreich verarbeitet!', 'patsch9-accounting-bridge') . '</p></div>';
+            echo '<div class="notice notice-success"><p>' . esc_html__('Queue item processed successfully!', 'patsch9-accounting-bridge') . '</p></div>';
         } elseif ('error' === $queue_notice) {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Queue-Item konnte nicht verarbeitet werden. Details stehen im Fehlerprotokoll.', 'patsch9-accounting-bridge') . '</p></div>';
+            echo '<div class="notice notice-error"><p>' . esc_html__('The queue item could not be processed. See the error log for details.', 'patsch9-accounting-bridge') . '</p></div>';
         } elseif ('cleared' === $queue_notice) {
             $deleted = isset($_GET['patsacbr_queue_deleted']) ? absint(wp_unslash($_GET['patsacbr_queue_deleted'])) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only redirect status.
             /* translators: %d: Number of deleted queue items */
-            echo '<div class="notice notice-success"><p>' . esc_html(sprintf(__('%d Queue-Items gelöscht!', 'patsch9-accounting-bridge'), $deleted)) . '</p></div>';
+            echo '<div class="notice notice-success"><p>' . esc_html(sprintf(__('%d queue items deleted!', 'patsch9-accounting-bridge'), $deleted)) . '</p></div>';
         } elseif ('released' === $queue_notice) {
-            echo '<div class="notice notice-warning"><p>' . esc_html__('Die Sicherheitssperre wurde nach manueller Prüfung freigegeben. Ein erneuter Schreibvorgang ist nun möglich.', 'patsch9-accounting-bridge') . '</p></div>';
+            echo '<div class="notice notice-warning"><p>' . esc_html__('The safety lock was released after manual verification. A new write operation is now possible.', 'patsch9-accounting-bridge') . '</p></div>';
         } elseif ('release_error' === $queue_notice) {
-            echo '<div class="notice notice-error"><p>' . esc_html__('Die Sicherheitssperre konnte nicht freigegeben werden.', 'patsch9-accounting-bridge') . '</p></div>';
+            echo '<div class="notice notice-error"><p>' . esc_html__('The safety lock could not be released.', 'patsch9-accounting-bridge') . '</p></div>';
         }
         ?>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th><?php esc_html_e('Bestellung', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Aktion', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Order', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Action', 'patsch9-accounting-bridge'); ?></th>
                     <th><?php esc_html_e('Status', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Versuche', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Erstellt', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Fehlermeldung', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Aktion', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Attempts', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Created', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Error message', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Action', 'patsch9-accounting-bridge'); ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($queue_items)): ?>
-                    <tr><td colspan="7"><?php esc_html_e('Queue ist leer', 'patsch9-accounting-bridge'); ?></td></tr>
+                    <tr><td colspan="7"><?php esc_html_e('The queue is empty', 'patsch9-accounting-bridge'); ?></td></tr>
                 <?php else: ?>
                     <?php foreach ($queue_items as $item): ?>
                         <tr>
@@ -713,11 +713,11 @@ class PATSACBR_Admin_Settings {
                             <td><?php echo esc_html($item->error_message ?: '–'); ?></td>
                             <td>
                                 <?php if ('manual_check' === $item->status): ?>
-                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;" onsubmit="return confirm('<?php esc_attr_e('Nur freigeben, nachdem Sie in Lexware geprüft haben, ob der Beleg bereits erstellt wurde. Fortfahren?', 'patsch9-accounting-bridge'); ?>');">
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline;" data-patsacbr-confirm="<?php esc_attr_e('Only release this lock after checking in Lexware whether the document has already been created. Continue?', 'patsch9-accounting-bridge'); ?>">
                                         <input type="hidden" name="action" value="patsacbr_release_manual_check">
                                         <input type="hidden" name="item_id" value="<?php echo esc_attr(absint($item->id)); ?>">
                                         <?php wp_nonce_field('patsacbr_release_manual_check_' . absint($item->id)); ?>
-                                        <button type="submit" class="button button-small"><?php esc_html_e('Nach Prüfung freigeben', 'patsch9-accounting-bridge'); ?></button>
+                                        <button type="submit" class="button button-small"><?php esc_html_e('Release after verification', 'patsch9-accounting-bridge'); ?></button>
                                     </form>
                                 <?php else: ?>–<?php endif; ?>
                             </td>
@@ -726,18 +726,18 @@ class PATSACBR_Admin_Settings {
                 <?php endif; ?>
             </tbody>
         </table>
-        <h2 style="margin-top: 40px;"> <?php esc_html_e('Fehler-Log (letzte 20)', 'patsch9-accounting-bridge'); ?></h2>
+        <h2 style="margin-top: 40px;"> <?php esc_html_e('Error log (last 20)', 'patsch9-accounting-bridge'); ?></h2>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th><?php esc_html_e('Zeit', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Titel', 'patsch9-accounting-bridge'); ?></th>
-                    <th><?php esc_html_e('Nachricht', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Time', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Title', 'patsch9-accounting-bridge'); ?></th>
+                    <th><?php esc_html_e('Message', 'patsch9-accounting-bridge'); ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($error_logs)): ?>
-                    <tr><td colspan="3"><?php esc_html_e('Keine Fehler', 'patsch9-accounting-bridge'); ?></td></tr>
+                    <tr><td colspan="3"><?php esc_html_e('No errors', 'patsch9-accounting-bridge'); ?></td></tr>
                 <?php else: ?>
                     <?php foreach (array_slice($error_logs, 0, 20) as $error): ?>
                         <tr>

@@ -47,12 +47,12 @@ class PATSACBR_Customer_Area {
 
         ?>
         <section class="patsacbr-invoice-download" style="margin-top: 20px;">
-            <h2><?php esc_html_e('Rechnung', 'patsch9-accounting-bridge'); ?></h2>
+            <h2><?php esc_html_e('Invoice', 'patsch9-accounting-bridge'); ?></h2>
             <p>
                 <a href="<?php echo esc_url($download_url); ?>"
                    class="button"
                    target="_blank">
-                    <?php esc_html_e('Rechnung herunterladen', 'patsch9-accounting-bridge'); ?>
+                    <?php esc_html_e('Download invoice', 'patsch9-accounting-bridge'); ?>
                 </a>
             </p>
         </section>
@@ -66,7 +66,7 @@ class PATSACBR_Customer_Area {
             $new_columns[$key] = $name;
 
             if ($key === 'order-total') {
-                $new_columns['invoice'] = esc_html__('Rechnung', 'patsch9-accounting-bridge');
+                $new_columns['invoice'] = esc_html__('Invoice', 'patsch9-accounting-bridge');
             }
         }
 
@@ -79,7 +79,7 @@ class PATSACBR_Customer_Area {
 
         if ($lexware_invoice_id && $invoice_voided !== 'yes') {
             $download_url = $this->get_download_url($order->get_id());
-            echo '<a href="' . esc_url($download_url) . '" target="_blank">' . esc_html__('Rechnung', 'patsch9-accounting-bridge') . '</a>';
+            echo '<a href="' . esc_url($download_url) . '" target="_blank">' . esc_html__('Invoice', 'patsch9-accounting-bridge') . '</a>';
         } else {
             echo '–';
         }
@@ -94,25 +94,25 @@ class PATSACBR_Customer_Area {
         $nonce = isset($_GET['nonce']) ? sanitize_text_field(wp_unslash($_GET['nonce'])) : '';
 
         if (!wp_verify_nonce($nonce, 'patsacbr_download_' . $order_id)) {
-            wp_die(esc_html__('Ungültiger Sicherheitsschlüssel', 'patsch9-accounting-bridge'), '', array('response' => 403));
+            wp_die(esc_html__('Invalid security token', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
 
         $order = wc_get_order($order_id);
 
         if (!$order) {
-            wp_die(esc_html__('Bestellung nicht gefunden', 'patsch9-accounting-bridge'), '', array('response' => 404));
+            wp_die(esc_html__('Order not found', 'patsch9-accounting-bridge'), '', array('response' => 404));
         }
 
         // Explicit ownership check; do not rely on an application-specific meta capability.
         $current_user_id = get_current_user_id();
         if (!$current_user_id || ((int) $order->get_user_id() !== $current_user_id && !current_user_can('manage_woocommerce'))) {
-            wp_die(esc_html__('Keine Berechtigung', 'patsch9-accounting-bridge'), '', array('response' => 403));
+            wp_die(esc_html__('Permission denied', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
 
         $lexware_invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
 
         if (!$lexware_invoice_id) {
-            wp_die(esc_html__('Keine Rechnung vorhanden', 'patsch9-accounting-bridge'), '', array('response' => 404));
+            wp_die(esc_html__('No invoice available', 'patsch9-accounting-bridge'), '', array('response' => 404));
         }
 
         $api_client = new PATSACBR_API_Client();
@@ -127,12 +127,12 @@ class PATSACBR_Customer_Area {
         }
         $path = isset($document['path']) ? $document['path'] : '';
         if (!$path || !$wp_filesystem || !$wp_filesystem->exists($path)) {
-            wp_die(esc_html__('Rechnungsdatei nicht gefunden', 'patsch9-accounting-bridge'));
+            wp_die(esc_html__('Invoice document not found', 'patsch9-accounting-bridge'));
         }
         $content = $wp_filesystem->get_contents($path);
         $wp_filesystem->delete($path);
         if ($content === false) {
-            wp_die(esc_html__('Rechnungsdatei konnte nicht gelesen werden', 'patsch9-accounting-bridge'));
+            wp_die(esc_html__('The invoice document could not be read', 'patsch9-accounting-bridge'));
         }
         $extension = in_array(($document['extension'] ?? ''), array('pdf', 'xml'), true) ? $document['extension'] : 'bin';
         $mime = in_array(($document['mime'] ?? ''), array('application/pdf', 'application/xml'), true) ? $document['mime'] : 'application/octet-stream';

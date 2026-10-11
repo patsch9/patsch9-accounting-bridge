@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Patsch9 Accounting Bridge for WooCommerce
  * Plugin URI: https://github.com/patsch9/patsch9-accounting-bridge
- * Description: Automatische Rechnungserstellung in Lexware Office aus WooCommerce-Bestellungen mit vollständiger Synchronisation und Kundenbereichs-Integration
- * Version: 2026.10.3
+ * Description: Automatic Lexware Office invoices from WooCommerce orders with synchronization and customer account integration.
+ * Version: 2026.10.4
  * Author: Patrick Schmidt
  * Author URI: https://github.com/patsch9
  * License: GPLv2 or later
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin-Konstanten definieren
-define('PATSACBR_VERSION', '2026.10.3');
+define('PATSACBR_VERSION', '2026.10.4');
 define('PATSACBR_DB_VERSION', '1.4.0');
 define('PATSACBR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PATSACBR_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -58,6 +58,9 @@ class PATSACBR_Connector {
      * Konstruktor
      */
     private function __construct() {
+        // Register bundled translations before any init handlers use them.
+        add_action('init', array($this, 'load_translations'), 0);
+
         // WooCommerce-Abhängigkeit prüfen
         add_action('plugins_loaded', array($this, 'init'));
 
@@ -101,11 +104,6 @@ class PATSACBR_Connector {
 
         // Migrate identifiers from pre-directory builds before settings are read.
         PATSACBR_Legacy_Migration::run();
-
-        // Hinweis: load_plugin_textdomain() ist ab WP 4.6+ nicht mehr notwendig.
-        // WordPress lädt Übersetzungen automatisch basierend auf Text Domain Header.
-        // Für manuelle .mo/.po-Dateien im /languages Ordner kann der Aufruf optional bleiben,
-        // wird aber von WordPress.org Plugin Check als discouraged markiert.
 
         // Datenbankschema bei Updates sicher migrieren.
         if (get_option('patsacbr_db_version') !== PATSACBR_DB_VERSION) {
@@ -186,19 +184,22 @@ public function register_invoice_email($email_classes) {
         if (!$this->should_show_dependency_notice()) {
             return;
         }
-        echo '<div class="notice notice-error"><p>' . esc_html__('Patsch9 Accounting Bridge benötigt WooCommerce 10.9.4 oder höher.', 'patsch9-accounting-bridge') . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+        echo '<div class="notice notice-error"><p>' . esc_html__('Patsch9 Accounting Bridge requires WooCommerce 10.9.4 or later.', 'patsch9-accounting-bridge') . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
     }
 
     /**
      * Plugin-Aktivierung
      */
     public function activate() {
+        // Activation can load the plugin after init has already fired.
+        $this->load_translations();
+
         // Prüfe Mindestanforderungen
         if (!$this->check_requirements()) {
             deactivate_plugins(plugin_basename(__FILE__));
             wp_die(
-                esc_html__('Patsch9 Accounting Bridge erfordert WordPress 6.9 oder höher, WooCommerce 10.9.4 oder höher und PHP 8.2 oder höher.', 'patsch9-accounting-bridge'),
-                esc_html__('Plugin-Aktivierung fehlgeschlagen', 'patsch9-accounting-bridge'),
+                esc_html__('Patsch9 Accounting Bridge requires WordPress 6.9 or later, WooCommerce 10.9.4 or later, and PHP 8.2 or later.', 'patsch9-accounting-bridge'),
+                esc_html__('Plugin activation failed', 'patsch9-accounting-bridge'),
                 array('back_link' => true)
             );
         }
@@ -323,11 +324,11 @@ public function register_invoice_email($email_classes) {
         $defaults = array(
             'patsacbr_api_key' => '',
             'patsacbr_order_statuses' => array('wc-completed', 'wc-processing'),
-            'patsacbr_invoice_title' => 'Rechnung',
-            'patsacbr_invoice_introduction' => 'Vielen Dank für Ihre Bestellung [order_number] vom [order_date].',
-            'patsacbr_payment_terms' => 'Zahlbar innerhalb von 14 Tagen ohne Abzug.',
+            'patsacbr_invoice_title' => __('Invoice', 'patsch9-accounting-bridge'),
+            'patsacbr_invoice_introduction' => __('Thank you for your order [order_number] dated [order_date].', 'patsch9-accounting-bridge'),
+            'patsacbr_payment_terms' => __('Payable within 14 days without deduction.', 'patsch9-accounting-bridge'),
             'patsacbr_payment_due_days' => '14',
-            'patsacbr_closing_text' => 'Vielen Dank für Ihr Vertrauen.',
+            'patsacbr_closing_text' => __('Thank you for your trust.', 'patsch9-accounting-bridge'),
             'patsacbr_finalize_immediately' => 'yes',
             'patsacbr_auto_sync_contacts' => 'yes',
             'patsacbr_show_in_customer_area' => 'yes',
@@ -356,11 +357,17 @@ public function register_invoice_email($email_classes) {
 		// Nur bei Deinstallation (siehe uninstall.php)
 	}
 
+    public function load_translations() {
+        // WordPress.org language packs take precedence; this path enables the
+        // bundled German catalog for installations without a language pack.
+        load_plugin_textdomain('patsch9-accounting-bridge', false, dirname(PATSACBR_PLUGIN_BASENAME) . '/languages'); // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound -- Registers the bundled de_DE catalog for installations without an approved WordPress.org language pack.
+    }
+
     public function add_privacy_policy_content() {
         if (!function_exists('wp_add_privacy_policy_content')) {
             return;
         }
-        $content = '<p>' . esc_html__('Wenn die Lexware-Anbindung aktiviert und eine Rechnung erstellt wird, überträgt das Plugin zur Vertragserfüllung Rechnungs- und Kontaktdaten der jeweiligen WooCommerce-Bestellung an die Lexware Public API. Rechnungs-PDFs werden nicht dauerhaft im WordPress-Upload-Verzeichnis gespeichert, sondern nur temporär für einen angeforderten Download oder E-Mail-Versand verarbeitet.', 'patsch9-accounting-bridge') . '</p>';
+        $content = '<p>' . esc_html__('When the Lexware integration is enabled and an invoice is created, the plugin transfers invoice and contact data from the respective WooCommerce order to the Lexware Public API to fulfill the contract. Invoice PDFs are not stored permanently in the WordPress uploads directory; they are processed temporarily for a requested download or email delivery.', 'patsch9-accounting-bridge') . '</p>';
         wp_add_privacy_policy_content(esc_html__('Patsch9 Accounting Bridge', 'patsch9-accounting-bridge'), wp_kses_post(wpautop($content)));
     }
 
@@ -375,7 +382,7 @@ public function register_invoice_email($email_classes) {
         <div class="error">
             <p>
                 <strong><?php esc_html_e('Patsch9 Accounting Bridge', 'patsch9-accounting-bridge'); ?></strong>
-                <?php esc_html_e('benötigt WooCommerce 10.9.4 oder höher. Bitte installieren und aktivieren Sie WooCommerce.', 'patsch9-accounting-bridge'); ?>
+                <?php esc_html_e('requires WooCommerce 10.9.4 or later. Please install and activate WooCommerce.', 'patsch9-accounting-bridge'); ?>
             </p>
         </div>
         <?php

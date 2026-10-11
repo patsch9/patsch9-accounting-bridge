@@ -135,7 +135,7 @@ class PATSACBR_Invoice_Reconciler {
             update_option('patsacbr_invoice_reconciliation_status', 'running', false);
             return new WP_Error(
                 'reconciliation_busy',
-                __('Der historische Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen verhindert.', 'patsch9-accounting-bridge')
+                __('Historical invoice reconciliation is already running. A concurrent restart was prevented for safety reasons.', 'patsch9-accounting-bridge')
             );
         }
 
@@ -172,7 +172,7 @@ class PATSACBR_Invoice_Reconciler {
 
     public function handle_manual_restart() {
         if (!current_user_can('manage_woocommerce')) {
-            wp_die(esc_html__('Keine Berechtigung.', 'patsch9-accounting-bridge'), '', array('response' => 403));
+            wp_die(esc_html__('Permission denied.', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
 
         check_admin_referer('patsacbr_restart_invoice_reconciliation');
@@ -255,7 +255,7 @@ class PATSACBR_Invoice_Reconciler {
             ));
 
             if (!is_object($query) || !isset($query->orders, $query->max_num_pages)) {
-                $this->record_global_error('invalid_order_query', __('Der historische Rechnungsabgleich konnte die WooCommerce-Bestellungen nicht paginiert laden.', 'patsch9-accounting-bridge'));
+                $this->record_global_error('invalid_order_query', __('Historical invoice reconciliation could not load paginated WooCommerce orders.', 'patsch9-accounting-bridge'));
                 update_option('patsacbr_invoice_reconciliation_status', 'error', false);
                 return;
             }
@@ -327,7 +327,7 @@ class PATSACBR_Invoice_Reconciler {
                 update_option('patsacbr_invoice_reconciliation_page', $next_page, false);
                 $scheduled = $this->schedule_page($next_page);
                 if (!$scheduled) {
-                    $this->record_global_error('schedule_failed', __('Der nächste Batch des historischen Rechnungsabgleichs konnte nicht geplant werden.', 'patsch9-accounting-bridge'));
+                    $this->record_global_error('schedule_failed', __('The next batch of historical invoice reconciliation could not be scheduled.', 'patsch9-accounting-bridge'));
                     update_option('patsacbr_invoice_reconciliation_status', 'schedule_error', false);
                 } else {
                     update_option('patsacbr_invoice_reconciliation_status', 'scheduled', false);
@@ -349,7 +349,7 @@ class PATSACBR_Invoice_Reconciler {
 
     public function reconcile_before_create($order, $api_client = null) {
         if (!$order instanceof WC_Order) {
-            return new WP_Error('invalid_order', __('Ungültige Bestellung für den Lexware-Abgleich.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('invalid_order', __('Invalid order for Lexware reconciliation.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
         if ($order->get_meta('_patsacbr_lexware_invoice_id')) {
@@ -382,7 +382,7 @@ class PATSACBR_Invoice_Reconciler {
 
     public function reconcile_order($order, $api_client = null, $add_note = true) {
         if (!$order instanceof WC_Order) {
-            return new WP_Error('invalid_order', __('Ungültige Bestellung für den Lexware-Abgleich.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('invalid_order', __('Invalid order for Lexware reconciliation.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
         if ($order->get_meta('_patsacbr_lexware_invoice_id')) {
@@ -422,7 +422,7 @@ class PATSACBR_Invoice_Reconciler {
         $invoice_number = sanitize_text_field((string) ($match['voucherNumber'] ?? ''));
         $invoice_status = sanitize_key((string) ($match['voucherStatus'] ?? ''));
         if (!$invoice_id || !$invoice_number) {
-            return new WP_Error('invalid_reconciliation_match', __('Lexware hat beim historischen Rechnungsabgleich unvollständige Rechnungsdaten geliefert.', 'patsch9-accounting-bridge'), array('retryable' => false));
+            return new WP_Error('invalid_reconciliation_match', __('Lexware returned incomplete invoice data during historical reconciliation.', 'patsch9-accounting-bridge'), array('retryable' => false));
         }
 
         $order->update_meta_data('_patsacbr_lexware_invoice_id', $invoice_id);
@@ -441,7 +441,7 @@ class PATSACBR_Invoice_Reconciler {
         if ($add_note) {
             $order->add_order_note(sprintf(
                 /* translators: 1: Lexware invoice number, 2: Lexware invoice ID. */
-                __('Bestehende Lexware-Rechnung automatisch zugeordnet: %1$s (ID: %2$s). Der Abgleich erfolgte über die Bestellnummer im Einleitungstext und den identischen Gesamtbetrag.', 'patsch9-accounting-bridge'),
+                __('Existing Lexware invoice linked automatically: %1$s (ID: %2$s). The order number in the introduction and an identical total amount were used for matching.', 'patsch9-accounting-bridge'),
                 $invoice_number,
                 $invoice_id
             ));
@@ -475,7 +475,7 @@ class PATSACBR_Invoice_Reconciler {
             '<div class="notice notice-info is-dismissible"><p>%s</p></div>',
             esc_html(sprintf(
                 /* translators: 1: linked invoices, 2: orders without a match, 3: orders requiring review. */
-                __('Historischer Lexware-Rechnungsabgleich abgeschlossen: %1$d zugeordnet, %2$d ohne Treffer, %3$d mit Prüfbedarf.', 'patsch9-accounting-bridge'),
+                __('Historical Lexware invoice reconciliation completed: %1$d linked, %2$d without a match, %3$d requiring review.', 'patsch9-accounting-bridge'),
                 absint($stats['matched']),
                 absint($stats['not_found']),
                 absint($stats['errors'])
@@ -513,25 +513,25 @@ class PATSACBR_Invoice_Reconciler {
         $last_error_message = is_array($last_error) && !empty($last_error['message']) ? sanitize_text_field((string) $last_error['message']) : '';
 
         $labels = array(
-            'idle' => __('Noch nicht gestartet', 'patsch9-accounting-bridge'),
-            'scheduled' => __('Geplant / wartet auf Hintergrundverarbeitung', 'patsch9-accounting-bridge'),
-            'running' => __('Läuft', 'patsch9-accounting-bridge'),
-            'completed' => __('Abgeschlossen', 'patsch9-accounting-bridge'),
-            'api_missing' => __('API-Key fehlt oder ist ungültig', 'patsch9-accounting-bridge'),
-            'schedule_error' => __('Scheduler konnte nicht gestartet werden', 'patsch9-accounting-bridge'),
-            'error' => __('Fehler', 'patsch9-accounting-bridge'),
+            'idle' => __('Not started yet', 'patsch9-accounting-bridge'),
+            'scheduled' => __('Scheduled / waiting for background processing', 'patsch9-accounting-bridge'),
+            'running' => __('Running', 'patsch9-accounting-bridge'),
+            'completed' => __('Completed', 'patsch9-accounting-bridge'),
+            'api_missing' => __('API key missing or invalid', 'patsch9-accounting-bridge'),
+            'schedule_error' => __('The scheduler could not be started', 'patsch9-accounting-bridge'),
+            'error' => __('Error', 'patsch9-accounting-bridge'),
         );
         $status_label = isset($labels[$status]) ? $labels[$status] : $status;
 
         echo '<div class="notice notice-info" style="padding-bottom:12px;">';
-        echo '<p><strong>' . esc_html__('Historischer Lexware-Rechnungsabgleich', 'patsch9-accounting-bridge') . '</strong></p>';
+        echo '<p><strong>' . esc_html__('Historical Lexware invoice reconciliation', 'patsch9-accounting-bridge') . '</strong></p>';
 
         if ('started' === $notice) {
-            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich wurde neu gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';
+            echo '<p><strong>' . esc_html__('Invoice reconciliation has been restarted.', 'patsch9-accounting-bridge') . '</strong></p>';
         } elseif ('busy' === $notice) {
-            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich läuft bereits. Ein paralleler Neustart wurde aus Sicherheitsgründen nicht gestartet.', 'patsch9-accounting-bridge') . '</strong></p>';
+            echo '<p><strong>' . esc_html__('Invoice reconciliation is already running. A concurrent restart was not started for safety reasons.', 'patsch9-accounting-bridge') . '</strong></p>';
         } elseif ('error' === $notice) {
-            echo '<p><strong>' . esc_html__('Der Rechnungsabgleich konnte nicht gestartet werden. Bitte API-Konfiguration und Fehlerstatus prüfen.', 'patsch9-accounting-bridge') . '</strong></p>';
+            echo '<p><strong>' . esc_html__('Invoice reconciliation could not be started. Please check the API configuration and error status.', 'patsch9-accounting-bridge') . '</strong></p>';
         }
 
         echo '<p>' . esc_html(sprintf(
@@ -543,7 +543,7 @@ class PATSACBR_Invoice_Reconciler {
         )) . '</p>';
         echo '<p>' . esc_html(sprintf(
             /* translators: 1: checked orders, 2: matched invoices, 3: no matches, 4: errors, 5: already linked orders. */
-            __('Geprüft: %1$d · Zugeordnet: %2$d · Ohne Treffer: %3$d · Prüfbedarf/Fehler: %4$d · Bereits verknüpft: %5$d', 'patsch9-accounting-bridge'),
+            __('Checked: %1$d · Linked: %2$d · No match: %3$d · Review required/errors: %4$d · Already linked: %5$d', 'patsch9-accounting-bridge'),
             absint($stats['checked']),
             absint($stats['matched']),
             absint($stats['not_found']),
@@ -552,14 +552,14 @@ class PATSACBR_Invoice_Reconciler {
         )) . '</p>';
 
         if ($last_error_message) {
-            echo '<p><strong>' . esc_html__('Letzter Fehler:', 'patsch9-accounting-bridge') . '</strong> ' . esc_html($last_error_message) . '</p>';
+            echo '<p><strong>' . esc_html__('Last error:', 'patsch9-accounting-bridge') . '</strong> ' . esc_html($last_error_message) . '</p>';
         }
 
-        echo '<p>' . esc_html__('Ein manueller Neustart prüft alle aktuell vorhandenen, noch nicht verknüpften Bestellungen erneut. Bereits gespeicherte Lexware-Rechnungsverknüpfungen werden nicht verändert.', 'patsch9-accounting-bridge') . '</p>';
+        echo '<p>' . esc_html__('A manual restart checks all current unlinked orders again. Existing Lexware invoice links are not changed.', 'patsch9-accounting-bridge') . '</p>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="patsacbr_restart_invoice_reconciliation">';
         wp_nonce_field('patsacbr_restart_invoice_reconciliation');
-        submit_button(__('Historischen Rechnungsabgleich starten / neu starten', 'patsch9-accounting-bridge'), 'secondary', 'submit', false);
+        submit_button(__('Start / restart historical invoice reconciliation', 'patsch9-accounting-bridge'), 'secondary', 'submit', false);
         echo '</form>';
         echo '</div>';
     }
