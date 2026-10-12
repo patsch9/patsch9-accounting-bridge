@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.10.4\n"
+"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.10.5\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/patsch9-accounting-bridge\n"
 "Last-Translator: Patsch9 contributors\n"
 "Language-Team: German\n"

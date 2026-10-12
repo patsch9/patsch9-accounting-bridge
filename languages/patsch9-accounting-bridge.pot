@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.10.4\n"
+"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.10.5\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/patsch9-accounting-bridge\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-11T12:59:15+00:00\n"
+"POT-Creation-Date: 2026-10-12T11:24:19+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: patsch9-accounting-bridge\n"
@@ -158,7 +158,7 @@ msgid "Default payment terms"
 msgstr ""
 
 #: includes/class-admin-settings.php:390
-#: includes/class-lexware-api-client.php:1037
+#: includes/class-lexware-api-client.php:1054
 #: patsch9-accounting-bridge.php:329
 msgid "Payable within 14 days without deduction."
 msgstr ""
@@ -785,103 +785,103 @@ msgstr ""
 msgid "Gift voucher redemption"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1148
+#: includes/class-lexware-api-client.php:1165
 msgid "Invalid order for the Lexware invoice search."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1151
-#: includes/class-lexware-api-client.php:1270
+#: includes/class-lexware-api-client.php:1168
+#: includes/class-lexware-api-client.php:1287
 msgid "No valid API key configured"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1157
+#: includes/class-lexware-api-client.php:1174
 msgid "The order has no usable order number or creation date."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1193
+#: includes/class-lexware-api-client.php:1210
 msgid "Lexware did not return a valid document list during the historical invoice search."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1206
+#: includes/class-lexware-api-client.php:1223
 msgid "Lexware returned an invalid invoice ID during the historical invoice search."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1214
+#: includes/class-lexware-api-client.php:1231
 msgid "Lexware returned incomplete invoice data during the historical invoice search."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1225
+#: includes/class-lexware-api-client.php:1242
 msgid "Lexware returned inconsistent invoice data. The order was not linked automatically."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1232
+#: includes/class-lexware-api-client.php:1249
 msgid "The Lexware search period contains too many invoices for safe automatic reconciliation. Please review the order manually or narrow the search period using a filter."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1246
+#: includes/class-lexware-api-client.php:1263
 msgid "A matching invoice draft was found in Lexware for this order. Manual review is required to prevent duplicate documents."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1265
+#: includes/class-lexware-api-client.php:1282
 msgid "Multiple invoices matching this order number and total amount were found in Lexware. No automatic link was created."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1274
+#: includes/class-lexware-api-client.php:1291
 msgid "Invalid API method"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1279
+#: includes/class-lexware-api-client.php:1296
 msgid "Invalid API endpoint"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1298
+#: includes/class-lexware-api-client.php:1315
 msgid "API data could not be serialized."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1308
+#: includes/class-lexware-api-client.php:1325
 msgid "API transport error"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1309
+#: includes/class-lexware-api-client.php:1326
 msgid "The connection to the Lexware API failed."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1311
+#: includes/class-lexware-api-client.php:1328
 msgid "The write operation will not be retried automatically because it may already have completed on the server. Please check in Lexware."
 msgstr ""
 
 #. translators: %d: HTTP status code returned by the Lexware Office API.
-#: includes/class-lexware-api-client.php:1341
+#: includes/class-lexware-api-client.php:1358
 #, php-format
 msgid "Lexware API error (HTTP %d)"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1349
+#: includes/class-lexware-api-client.php:1366
 msgid "The write operation will not be retried automatically because Lexware may already have processed it despite the error. Please check in Lexware before sending again."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1351
+#: includes/class-lexware-api-client.php:1368
 msgid "API error"
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1361
+#: includes/class-lexware-api-client.php:1378
 msgid "Lexware confirmed the write operation succeeded but did not return a usable response body. The record may already have been created; please check in Lexware before retrying."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1372
+#: includes/class-lexware-api-client.php:1389
 msgid "Lexware returned an invalid JSON response after a write operation. The record may already have been created; please check in Lexware before retrying."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1373
+#: includes/class-lexware-api-client.php:1390
 msgid "Lexware returned an invalid JSON response."
 msgstr ""
 
-#: includes/class-lexware-api-client.php:1437
+#: includes/class-lexware-api-client.php:1454
 msgid "[Patsch9 Accounting Bridge] Error"
 msgstr ""
 
 #. translators: 1: Error title, 2: Error message, 3: Local timestamp.
-#: includes/class-lexware-api-client.php:1440
+#: includes/class-lexware-api-client.php:1457
 #, php-format
 msgid ""
 "Error: %1$s\n"

@@ -35,6 +35,8 @@ jobs:
       - name: PHP syntax
         shell: bash
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Rental metadata export regressions
+        run: php tests/test-rental-meta.php
       - name: JavaScript syntax
         if: matrix.php == '8.2'
         shell: bash
