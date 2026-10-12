@@ -9,9 +9,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing stable GitHub release tag to deploy
+        description: Existing stable GitHub release tag to deploy (vYYYY.M.PATCH)
         required: true
-        default: v2026.10.3
         type: string
 
 concurrency:
@@ -26,6 +25,8 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
        startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -48,7 +49,7 @@ jobs:
           fi
 
           if [[ ! "$tag" =~ ^v[0-9]{4}\.([1-9]|1[0-2])\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::Only stable CalVer tags such as v2026.10.3 may be deployed to WordPress.org."
+            echo "::error::Only stable CalVer release tags may be deployed to WordPress.org."
             exit 1
           fi
 

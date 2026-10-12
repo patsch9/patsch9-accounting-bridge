@@ -35,6 +35,60 @@ Für ein stabiles Release müssen diese Angaben übereinstimmen:
 
 ## Automatisierte GitHub-Releases
 
+### Dauerhaft benötigte Workflows
+
+| Workflow | Auslöser | Aufgabe |
+| --- | --- | --- |
+| `static-checks.yml` | PRs nach `main`, Pushes nach `main` | PHP 8.2/8.3/8.4, JavaScript, Übersetzungskataloge und WordPress Plugin Check. |
+| `release.yml` | `v*`-Tags; PRs mit Änderungen an Release-Workflow oder `.distignore` | Installierbares ZIP prüfen; ausschließlich Tag-Läufe veröffentlichen ein GitHub Release. |
+| `wordpress-org-deploy.yml` | Erfolgreicher Release-Tag-Lauf; manuell mit expliziter Tag-Eingabe | Verifiziertes stabiles GitHub-Release nach WordPress.org übertragen. |
+
+Dependabot bleibt für wöchentliche Updates der verwendeten Actions aktiv. Die
+Updates werden in einem gemeinsamen PR gebündelt; sämtliche vorgeschriebenen
+Prüfungen laufen weiterhin. Action-Versionen bleiben auf Commit-SHAs fixiert.
+
+Feature-Branches werden durch den PR geprüft. Dadurch laufen identische Prüfungen
+nicht zusätzlich für jeden Branch-Push. Tag-Pushes starten nur den Release-Bau;
+dieser prüft das tatsächlich ausgelieferte Paket. Neuere PR-Commits ersetzen noch
+laufende ältere Prüfungen. Veröffentlichungs- und Deploy-Läufe werden nicht
+automatisch wegen neuerer Commits abgebrochen.
+
+Die Job-Namen `syntax (8.2)`, `syntax (8.3)`, `syntax (8.4)` und
+`wordpress-plugin-check` bleiben unverändert, da die Repository-Regeln sie für
+`main` verlangen. Die PR-Prüfung hat deshalb keine Dateipfadfilter, die erforderliche
+Checks dauerhaft auf „Pending“ halten könnten.
+
+### Historische einmalige Workflows
+
+Stand der Prüfung: 2026-10-12. Folgende Dateien sind bereits aus `main` entfernt,
+werden aber von GitHub noch als historische Workflow-Einträge geführt:
+
+- `apply-historical-reconciliation.yml`
+- `apply-plugin-check-fixes.yml`
+- `build-reconciliation-test-package.yml`
+- `fix-reconciliation-race.yml`
+- `fix-release-db-warnings.yml`
+- `harden-reconciliation-restart.yml`
+- `prepare-reconciliation-control-version.yml`
+- `tune-historical-reconciliation.yml`
+- `wporg-review-fix.yml`
+
+Sie sind für Entwicklung, Release und Deployment nicht mehr erforderlich. Ihre
+Workflow-Dateien dürfen nicht für neue Änderungen reaktiviert werden. Künftige
+Codekorrekturen erfolgen über reguläre Branches und PRs.
+
+Der Zustand „active“ in GitHubs historischem Workflow-Verzeichnis beweist nicht,
+dass eine entsprechende Datei noch in `main` vorhanden ist. Eine zusätzliche
+Deaktivierung ist über GitHubs Workflow-Verwaltung möglich. Die Laufhistorie wird
+bei dieser Bereinigung erhalten; ihr Löschen ist ein eigener, nicht rückgängig
+zu machender Verwaltungsschritt.
+
+Referenzen:
+- https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+- https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
+
+### Ablauf
+
 GitHub Releases werden durch `.github/workflows/release.yml` automatisch aus Git-Tags erzeugt.
 
 1. Release-fertigen Code zuerst nach `main` mergen.

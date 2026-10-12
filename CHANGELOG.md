@@ -4,7 +4,10 @@ Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONI
 
 ## Noch nicht veröffentlicht
 
-Keine Änderungen.
+- GitHub Actions auf PR-/Main-Prüfungen und Release-Tags begrenzt; doppelte Branch-/Tag-Prüfläufe vermieden.
+- Veraltete PR-Prüfläufe werden abgebrochen; Veröffentlichungs- und Deploy-Läufe bleiben geschützt.
+- Automatischer WordPress.org-Deploy nur nach erfolgreichem Release-Tag-Lauf aus diesem Repository; manuelle Tag-Eingabe ohne veralteten Standardwert.
+- Dependabot-Updates der Actions gebündelt; historische Einmal-Workflows und dauerhaft benötigte Workflows dokumentiert.
 
 ## 2026.10.4 – Noch nicht veröffentlicht
 
