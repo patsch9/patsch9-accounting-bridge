@@ -912,7 +912,7 @@ class PATSACBR_API_Client {
             $net = (float) $fee_item->get_total();
             $tax = (float) $fee_item->get_total_tax();
             $gross = $net + $tax;
-            $is_deposit = 'yes' === $fee_item->get_meta('_clr_deposit', true) || 'deposit' === $fee_item->get_meta('_clr_fee_type', true);
+            $is_deposit = $this->is_rental_deposit($fee_item);
 
             // A genuine refundable rental deposit is a security payment, not consideration
             // for the rental service. Do not turn it into a 0% revenue line in Lexware.
@@ -980,9 +980,26 @@ class PATSACBR_API_Client {
         }
         return $items;
     }
+    /** Prefer canonical metadata; historical orders remain exportable without Rental. */
+    private function get_rental_meta($object, $suffix) {
+        if (!$object || !is_callable(array($object, 'get_meta'))) {
+            return '';
+        }
+        $key = '_rmwc_' . $suffix;
+        if (is_callable(array($object, 'meta_exists')) && $object->meta_exists($key)) {
+            return $object->get_meta($key, true);
+        }
+        $value = $object->get_meta($key, true);
+        return '' !== $value ? $value : $object->get_meta('_clr_' . $suffix, true);
+    }
+
+    private function is_rental_deposit($item) {
+        return 'yes' === $this->get_rental_meta($item, 'deposit') || 'deposit' === $this->get_rental_meta($item, 'fee_type');
+    }
+
     private function get_tax_rate_for_class($tax_class, $order, $item = null) {
         unset($tax_class, $order);
-        if ($item && is_callable(array($item, 'get_meta')) && ('yes' === $item->get_meta('_clr_deposit', true) || 'deposit' === $item->get_meta('_clr_fee_type', true))) {
+        if ($this->is_rental_deposit($item)) {
             return 0.0;
         }
         if ($item && is_callable(array($item, 'get_tax_status')) && 'taxable' !== $item->get_tax_status()) {
@@ -1039,7 +1056,7 @@ class PATSACBR_API_Client {
         // Optional extension metadata. No dependency on the rental plugin:
         // normal WooCommerce orders simply do not have this value.
         $addition = $order instanceof WC_Order
-            ? (string) $order->get_meta('_clr_invoice_payment_terms_addition', true)
+            ? (string) $this->get_rental_meta($order, 'invoice_payment_terms_addition')
             : '';
         if ('' !== $addition) {
             // Older rental-plugin builds stored wc_price() output after stripping

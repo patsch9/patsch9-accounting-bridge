@@ -2,6 +2,11 @@
 
 Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
 
+## 2026.10.5 – 2026-10-12
+
+- Rental-Metadaten unter `_rmwc_*` werden bei Kautionen und Zahlungsbedingungen erkannt; historische `_clr_*`-Bestellungen bleiben als Fallback unterstützt.
+- Rückzahlbare Kautionen bleiben informative Textpositionen und erhöhen den Lexware-Rechnungsbetrag nicht.
+
 ## Noch nicht veröffentlicht
 
 - GitHub Actions auf PR-/Main-Prüfungen und Release-Tags begrenzt; doppelte Branch-/Tag-Prüfläufe vermieden.
