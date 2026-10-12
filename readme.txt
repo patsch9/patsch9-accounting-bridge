@@ -4,7 +4,7 @@ Tags: woocommerce, lexware, invoices, accounting, api
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2026.10.5
+Stable tag: 2026.10.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,9 @@ Not by default. Full data cleanup on uninstall must be explicitly enabled in the
 English is the source language. A complete German (de_DE) translation is bundled, including customer emails and invoice text defaults for new installations. Existing custom invoice texts and saved email settings are preserved. Additional translations can be contributed at https://translate.wordpress.org/projects/wp-plugins/patsch9-accounting-bridge/.
 
 == Changelog ==
+
+= 2026.10.6 =
+* Protect legacy migration data and serialize invoice writes for each order. Add database regression tests.
 
 = 2026.10.5 =
 * Recognize canonical Rental Engine deposit and payment-terms metadata while retaining support for historical orders.

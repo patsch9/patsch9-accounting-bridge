@@ -3,7 +3,7 @@
  * Plugin Name: Patsch9 Accounting Bridge for WooCommerce
  * Plugin URI: https://github.com/patsch9/patsch9-accounting-bridge
  * Description: Automatic Lexware Office invoices from WooCommerce orders with synchronization and customer account integration.
- * Version: 2026.10.5
+ * Version: 2026.10.6
  * Author: Patrick Schmidt
  * Author URI: https://github.com/patsch9
  * License: GPLv2 or later
@@ -26,8 +26,8 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin-Konstanten definieren
-define('PATSACBR_VERSION', '2026.10.5');
-define('PATSACBR_DB_VERSION', '1.4.0');
+define('PATSACBR_VERSION', '2026.10.6');
+define('PATSACBR_DB_VERSION', '1.4.1');
 define('PATSACBR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PATSACBR_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('PATSACBR_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -103,11 +103,17 @@ class PATSACBR_Connector {
         }
 
         // Migrate identifiers from pre-directory builds before settings are read.
-        PATSACBR_Legacy_Migration::run();
+        if (!PATSACBR_Legacy_Migration::run()) {
+            add_action('admin_notices', array($this, 'migration_notice'));
+            return;
+        }
 
         // Datenbankschema bei Updates sicher migrieren.
         if (get_option('patsacbr_db_version') !== PATSACBR_DB_VERSION) {
-            $this->create_database_tables();
+            if (!$this->create_database_tables()) {
+                add_action('admin_notices', array($this, 'migration_notice'));
+                return;
+            }
             $this->cleanup_legacy_pdf_cache();
             // 1.3.1: print layouts do not control Lexware's invoice payment QR.
             // Remove the obsolete rental-only layout setting from previous builds.
@@ -172,6 +178,13 @@ public function register_invoice_email($email_classes) {
         PATSACBR_Queue_Handler::get_instance();
     }
 
+    public function migration_notice() {
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+        echo '<div class="notice notice-error"><p>' . esc_html__('Accounting Bridge is paused because its data migration could not complete. Legacy data has been preserved. Resolve conflicting settings or queue tables and database errors, then reload this page to retry.', 'patsch9-accounting-bridge') . '</p></div>';
+    }
+
     private function should_show_dependency_notice() {
         if (!is_admin() || !function_exists('get_current_screen')) {
             return false;
@@ -205,10 +218,16 @@ public function register_invoice_email($email_classes) {
         }
 
         // Preserve settings from pre-directory builds before defaults are created.
-        PATSACBR_Legacy_Migration::run();
+        if (!PATSACBR_Legacy_Migration::run()) {
+            add_action('admin_notices', array($this, 'migration_notice'));
+            return;
+        }
 
         // Erstelle Datenbank-Tabelle für Queue
-        $this->create_database_tables();
+        if (!$this->create_database_tables()) {
+            add_action('admin_notices', array($this, 'migration_notice'));
+            return;
+        }
 
         // Entferne ggf. alte öffentlich erreichbare PDF-Cache-Dateien früherer Versionen.
         $this->cleanup_legacy_pdf_cache();
@@ -286,7 +305,25 @@ public function register_invoice_email($email_classes) {
      */
     private function create_database_tables() {
         global $wpdb;
+        $lock = 'patsacbr_schema_' . substr(hash('sha256', DB_NAME . '|' . $wpdb->prefix), 0, 40);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Serialize the complete table move/schema upgrade/verification sequence.
+        if ('1' !== (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 0)', $lock))) {
+            return false;
+        }
+        try {
+            return $this->upgrade_database_tables();
+        } finally {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the schema advisory lock even after upgrade failure.
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
+        }
+    }
 
+    private function upgrade_database_tables() {
+        global $wpdb;
+
+        if (!PATSACBR_Legacy_Migration::migrate_queue_table()) {
+            return false;
+        }
         $charset_collate = $wpdb->get_charset_collate();
         $table_name = $wpdb->prefix . 'patsacbr_queue';
 
@@ -313,8 +350,33 @@ public function register_invoice_email($email_classes) {
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
-        PATSACBR_Legacy_Migration::migrate_queue_table();
+        // Verify the schema before marking the migration complete. dbDelta may
+        // execute several statements and does not expose a single success flag.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Verify required columns after a plugin-owned schema upgrade.
+        $columns = $wpdb->get_col($wpdb->prepare('SHOW COLUMNS FROM %i', $table_name));
+        $required = array('id', 'order_id', 'action', 'status', 'dedupe_key', 'lexware_invoice_id', 'lexware_contact_id', 'attempts', 'error_message', 'locked_at', 'next_attempt_at', 'created_at', 'updated_at');
+        if ('' !== $wpdb->last_error || !is_array($columns) || array_diff($required, $columns)) {
+            return false;
+        }
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Verify the unique deduplication index, including failures adding it to old data.
+        $indexes = $wpdb->get_results($wpdb->prepare('SHOW INDEX FROM %i', $table_name), ARRAY_A);
+        $dedupe = false;
+        foreach (is_array($indexes) ? $indexes : array() as $index) {
+            if ('dedupe_key' === $index['Key_name'] && 'dedupe_key' === $index['Column_name'] && 0 === (int) $index['Non_unique']) {
+                $dedupe = true;
+            }
+        }
+        if ('' !== $wpdb->last_error || !$dedupe) {
+            return false;
+        }
+        // Old workers without a recorded lease may already have written to
+        // Lexware. Preserve the row but require review rather than replaying it.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Repair incomplete legacy processing state without replaying a remote write.
+        if (false === $wpdb->query($wpdb->prepare("UPDATE %i SET status='manual_check', dedupe_key=NULL WHERE status='processing' AND locked_at IS NULL", $table_name))) {
+            return false;
+        }
         update_option('patsacbr_db_version', PATSACBR_DB_VERSION, false);
+        return PATSACBR_DB_VERSION === get_option('patsacbr_db_version');
     }
 
     /**
