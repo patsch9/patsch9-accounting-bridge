@@ -376,7 +376,11 @@ public function register_invoice_email($email_classes) {
             return false;
         }
         update_option('patsacbr_db_version', PATSACBR_DB_VERSION, false);
-        return PATSACBR_DB_VERSION === get_option('patsacbr_db_version');
+        if (PATSACBR_DB_VERSION !== get_option('patsacbr_db_version')) {
+            return false;
+        }
+        delete_option('wl' . 'c_db_version');
+        return true;
     }
 
     /**

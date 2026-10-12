@@ -16,7 +16,6 @@ final class PATSACBR_Legacy_Migration {
         'auto_send_email',
         'auto_sync_contacts',
         'closing_text',
-        'db_version',
         'delete_data_on_uninstall',
         'email_on_error',
         'enable_logging',
@@ -142,7 +141,14 @@ final class PATSACBR_Legacy_Migration {
                 return false;
             }
         }
-        delete_option($legacy_key);
+        if (!delete_option($legacy_key)) {
+            // WordPress may evict option caches before the DELETE fails. Remove
+            // negative/alloptions caches too so the preserved source is visible.
+            wp_cache_delete($legacy_key, 'options');
+            wp_cache_delete('alloptions', 'options');
+            wp_cache_delete('notoptions', 'options');
+            return false;
+        }
         return $sentinel === get_option($legacy_key, $sentinel);
     }
 
