@@ -1230,3 +1230,8 @@ msgstr "vielen Dank für Ihre Bestellung. Im Anhang finden Sie Ihre Rechnungsdat
 #, php-format
 msgid "Order #%s"
 msgstr "Bestellung #%s"
+
+
+#: patsch9-accounting-bridge.php
+msgid "Accounting Bridge is paused because its data migration could not complete. Legacy data has been preserved. Resolve conflicting settings or queue tables and database errors, then reload this page to retry."
+msgstr "Accounting Bridge ist pausiert, weil die Datenmigration nicht abgeschlossen werden konnte. Alte Daten bleiben erhalten. Beheben Sie widersprüchliche Einstellungen oder Queue-Tabellen und Datenbankfehler und laden Sie die Seite für einen erneuten Versuch neu."

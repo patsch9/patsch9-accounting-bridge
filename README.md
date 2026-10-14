@@ -1,6 +1,6 @@
 # Patsch9 Accounting Bridge for WooCommerce
 
-Entwicklungsstand: **2026.10.5**
+Entwicklungsstand: **2026.10.6**
 
 Patsch9 Accounting Bridge verbindet WooCommerce mit der Lexware Office Public API und unterstützt die Erstellung und Verwaltung von Rechnungen und Gutschriften aus WooCommerce-Bestellungen.
 

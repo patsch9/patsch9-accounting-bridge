@@ -250,12 +250,53 @@ class PATSACBR_Queue_Handler {
         return $instance->process_item($item);
     }
 
+    /** Serialize all remote writes and manual link changes for one order. */
+    public static function with_order_lock($order_id, $callback) {
+        global $wpdb;
+        $lock = 'patsacbr_order_' . substr(hash('sha256', DB_NAME . '|' . $wpdb->prefix . '|' . absint($order_id)), 0, 40);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Cross-request advisory lock protects Lexware writes for every action of this order.
+        if ('1' !== (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 0)', $lock))) {
+            return new WP_Error('queue_busy', esc_html__('This Lexware action is already being processed.', 'patsch9-accounting-bridge'));
+        }
+        try {
+            return call_user_func($callback);
+        } finally {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the matching order lock even when an exception interrupts processing.
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
+        }
+    }
+
     private function process_item($item) {
+        $result = self::with_order_lock($item->order_id, function() use ($item) {
+            global $wpdb;
+            // An ambiguous previous action blocks ALL writes for this order,
+            // including a different queue action that would otherwise replay it.
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read current unresolved writes across all actions of the order.
+            $blocked = $wpdb->get_var($wpdb->prepare("SELECT id FROM %i WHERE order_id=%d AND status='manual_check' LIMIT 1", $wpdb->prefix . 'patsacbr_queue', absint($item->order_id)));
+            if ('' !== $wpdb->last_error || $blocked) {
+                return new WP_Error('queue_manual_check', esc_html__('This Lexware write operation is locked after an ambiguous transmission state. Please check in Lexware first, then explicitly release the lock under WooCommerce > Accounting Bridge > Logs & Queue.', 'patsch9-accounting-bridge'));
+            }
+            return $this->process_locked_item($item);
+        });
+        if (is_wp_error($result) && in_array($result->get_error_code(), array('queue_busy', 'queue_manual_check'), true)) {
+            // No remote write was made: keep the item pending without consuming
+            // an attempt. Back off rather than exhausting retries under contention.
+            global $wpdb;
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Return an unprocessed claim atomically to the plugin-owned queue.
+            $wpdb->query($wpdb->prepare("UPDATE %i SET status='pending', attempts=GREATEST(0,attempts-1), locked_at=NULL, next_attempt_at=%s WHERE id=%d AND status='processing'", $wpdb->prefix . 'patsacbr_queue', wp_date('Y-m-d H:i:s', time() + MINUTE_IN_SECONDS, wp_timezone()), absint($item->id)));
+        }
+        return $result;
+    }
+
+    private function process_locked_item($item) {
         $order = wc_get_order(absint($item->order_id));
         if (!$order) {
             $this->mark_as_failed($item, esc_html__('Order not found', 'patsch9-accounting-bridge'), false);
             return new WP_Error('order_not_found', esc_html__('Order not found', 'patsch9-accounting-bridge'));
         }
+        // Bypass warmed metadata after another worker modified this order.
+        $order->get_data_store()->read($order);
+        $order->read_meta_data(true);
         if (!in_array($item->action, self::allowed_actions(), true)) {
             $this->mark_as_failed($item, esc_html__('Unknown queue action', 'patsch9-accounting-bridge'), false);
             return new WP_Error('invalid_action', esc_html__('Unknown queue action', 'patsch9-accounting-bridge'));

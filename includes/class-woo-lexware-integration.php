@@ -164,45 +164,49 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
             return;
         }
 
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            return;
-        }
+        PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id) {
+            $order = wc_get_order($order_id);
+            if (!$order) {
+                return;
+            }
 
-        // Prüfe ob bereits eine Rechnung existiert
-        $existing_invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
-        if ($existing_invoice_id) {
-            return; // Keine Änderung wenn bereits eine Rechnung verknüpft ist
-        }
+            $order->get_data_store()->read($order);
+            $order->read_meta_data(true);
+            // Prüfe ob bereits eine Rechnung existiert
+            $existing_invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
+            if ($existing_invoice_id) {
+                return; // Keine Änderung wenn bereits eine Rechnung verknüpft ist
+            }
 
-        // Hole die manuellen Eingaben
-        $manual_invoice_id = isset($_POST['patsacbr_manual_invoice_id']) ?
-            sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_id'])) : '';
-        $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) ?
-            sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
+            // Hole die manuellen Eingaben
+            $manual_invoice_id = isset($_POST['patsacbr_manual_invoice_id']) ?
+                sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_id'])) : '';
+            $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) ?
+                sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
 
-        // Lexware resource IDs are UUIDs. Reject malformed manual links so a
-        // typo cannot poison later download/correction operations.
-        $valid_uuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $manual_invoice_id);
+            // Lexware resource IDs are UUIDs. Reject malformed manual links so a
+            // typo cannot poison later download/correction operations.
+            $valid_uuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $manual_invoice_id);
 
-        // Speichere nur wenn beide Felder ausgefüllt und die ID plausibel ist.
-        if (!empty($manual_invoice_id) && !empty($manual_invoice_number) && $valid_uuid) {
-            $order->update_meta_data('_patsacbr_lexware_invoice_id', $manual_invoice_id);
-            $order->update_meta_data('_patsacbr_lexware_invoice_number', $manual_invoice_number);
-            $order->update_meta_data('_patsacbr_manual_invoice_entry', 'yes');
-            $order->save();
+            // Speichere nur wenn beide Felder ausgefüllt und die ID plausibel ist.
+            if (!empty($manual_invoice_id) && !empty($manual_invoice_number) && $valid_uuid) {
+                $order->update_meta_data('_patsacbr_lexware_invoice_id', $manual_invoice_id);
+                $order->update_meta_data('_patsacbr_lexware_invoice_number', $manual_invoice_number);
+                $order->update_meta_data('_patsacbr_manual_invoice_entry', 'yes');
+                $order->save();
 
-            $order->add_order_note(
-                sprintf(
-                    /* translators: 1: Lexware invoice ID, 2: Invoice number */
-                    esc_html__('Invoice data entered manually: ID %1$s, number %2$s', 'patsch9-accounting-bridge'),
-                    $manual_invoice_id,
-                    $manual_invoice_number
-                )
-            );
-        } elseif (!empty($manual_invoice_id) || !empty($manual_invoice_number)) {
-            $order->add_order_note(esc_html__('Manual Lexware link not saved: Please provide a valid Lexware UUID and a complete invoice number.', 'patsch9-accounting-bridge'));
-        }
+                $order->add_order_note(
+                    sprintf(
+                        /* translators: 1: Lexware invoice ID, 2: Invoice number */
+                        esc_html__('Invoice data entered manually: ID %1$s, number %2$s', 'patsch9-accounting-bridge'),
+                        $manual_invoice_id,
+                        $manual_invoice_number
+                    )
+                );
+            } elseif (!empty($manual_invoice_id) || !empty($manual_invoice_number)) {
+                $order->add_order_note(esc_html__('Manual Lexware link not saved: Please provide a valid Lexware UUID and a complete invoice number.', 'patsch9-accounting-bridge'));
+            }
+        });
     }
 
     public function render_order_metabox($post_or_order) {
@@ -505,26 +509,35 @@ function patsacbr_ajax_unlink_invoice() {
     }
 
     $order_id = isset($_POST['order_id']) ? absint(wp_unslash($_POST['order_id'])) : 0;
-    $order = wc_get_order($order_id);
+    $result = PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id) {
+        $order = wc_get_order($order_id);
 
-    if (!$order) {
-        wp_send_json_error(array('message' => esc_html__('Order not found', 'patsch9-accounting-bridge')));
+        if (!$order) {
+            return new WP_Error('order_not_found', esc_html__('Order not found', 'patsch9-accounting-bridge'));
+        }
+
+        $order->get_data_store()->read($order);
+        $order->read_meta_data(true);
+        $order->delete_meta_data('_patsacbr_lexware_invoice_id');
+        $order->delete_meta_data('_patsacbr_lexware_invoice_number');
+        $order->delete_meta_data('_patsacbr_lexware_credit_note_id');
+        $order->delete_meta_data('_patsacbr_lexware_invoice_voided');
+        $order->delete_meta_data('_patsacbr_lexware_contact_id');
+        $order->delete_meta_data('_patsacbr_manual_invoice_entry');
+        $order->delete_meta_data('_patsacbr_lexware_credit_note_for_invoice_id');
+        $order->delete_meta_data('_patsacbr_lexware_update_source_invoice_id');
+        $order->delete_meta_data('_patsacbr_lexware_invoice_reconciled');
+        $order->update_meta_data('_patsacbr_skip_auto_reconciliation', 'yes');
+        $order->update_meta_data('_patsacbr_lexware_reconciliation_state', 'manually_unlinked');
+        $order->save();
+
+        $order->add_order_note(esc_html__('The link to the Lexware invoice was removed. Automatic historical relinking is disabled for this order.', 'patsch9-accounting-bridge'));
+
+        return true;
+    });
+    if (is_wp_error($result)) {
+        wp_send_json_error(array('message' => $result->get_error_message()));
     }
-
-    $order->delete_meta_data('_patsacbr_lexware_invoice_id');
-    $order->delete_meta_data('_patsacbr_lexware_invoice_number');
-    $order->delete_meta_data('_patsacbr_lexware_credit_note_id');
-    $order->delete_meta_data('_patsacbr_lexware_invoice_voided');
-    $order->delete_meta_data('_patsacbr_lexware_contact_id');
-    $order->delete_meta_data('_patsacbr_manual_invoice_entry');
-    $order->delete_meta_data('_patsacbr_lexware_credit_note_for_invoice_id');
-    $order->delete_meta_data('_patsacbr_lexware_update_source_invoice_id');
-    $order->delete_meta_data('_patsacbr_lexware_invoice_reconciled');
-    $order->update_meta_data('_patsacbr_skip_auto_reconciliation', 'yes');
-    $order->update_meta_data('_patsacbr_lexware_reconciliation_state', 'manually_unlinked');
-    $order->save();
-
-    $order->add_order_note(esc_html__('The link to the Lexware invoice was removed. Automatic historical relinking is disabled for this order.', 'patsch9-accounting-bridge'));
 
     wp_send_json_success(array('message' => esc_html__('Link removed', 'patsch9-accounting-bridge')));
 }

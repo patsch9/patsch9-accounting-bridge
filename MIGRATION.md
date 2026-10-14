@@ -30,3 +30,10 @@ Falls noch ein älterer Plugin-Ordner vor `patsch9-accounting-bridge` verwendet 
 ## Versionswechsel
 
 Alle Versionen vor `2026.10.0` gehören zur Vorabphase. Ab `2026.10.0` gilt ausschließlich das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
+
+
+## Fehler- und Konflikterhalt ab 2026.10.6
+
+Fehler bei der Übernahme von Optionen oder beim Tabellenupgrade pausieren Accounting Bridge und werden durch einen Admin-Hinweis sichtbar. Nach Behebung der Ursache wird beim nächsten Laden erneut versucht. Abweichende Werte unter alten und neuen Optionsnamen werden nicht überschrieben. Sichern und vergleichen Sie beide Werte und entfernen Sie erst nach bewusster Auswahl den nicht mehr benötigten alten Wert.
+
+Sind sowohl die historische Queue als auch die neue Queue befüllt, bleiben beide erhalten und die automatische Migration stoppt. Tabellen niemals ungeprüft löschen oder mit INSERT IGNORE zusammenführen. Konflikte anhand von Bestell-ID, Aktion und Lexware-Belegstatus manuell auflösen. Alte Einträge im Status processing ohne Sperrzeit werden zur manuellen Prüfung gesperrt, damit möglicherweise bereits erzeugte Belege nicht nochmals erzeugt werden.

@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 }
 
 final class PATSACBR_Legacy_Migration {
-    const VERSION = '1';
+    const VERSION = '2';
 
     private static $option_suffixes = array(
         'api_key',
@@ -16,7 +16,6 @@ final class PATSACBR_Legacy_Migration {
         'auto_send_email',
         'auto_sync_contacts',
         'closing_text',
-        'db_version',
         'delete_data_on_uninstall',
         'email_on_error',
         'enable_logging',
@@ -86,44 +85,71 @@ final class PATSACBR_Legacy_Migration {
         }
     }
 
+    /** Fail closed and retain legacy values until every copy has been verified. */
     public static function run() {
         self::register_legacy_api_key_constant();
         self::register_order_meta_fallbacks();
-
         if (self::VERSION === (string) get_option('patsacbr_prefix_migration_version', '')) {
-            return;
+            return true;
         }
-
-        foreach (self::$option_suffixes as $suffix) {
-            self::migrate_option(self::legacy_prefix() . $suffix, 'patsacbr_' . $suffix);
+        global $wpdb;
+        $lock = self::lock_name();
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Migration must be serialized across requests using a database advisory lock.
+        if ('1' !== (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 0)', $lock))) {
+            return false;
         }
+        try {
+            foreach (self::$option_suffixes as $suffix) {
+                if (!self::migrate_option(self::legacy_prefix() . $suffix, 'patsacbr_' . $suffix)) {
+                    return false;
+                }
+            }
+            if (!self::migrate_option('woocommerce_' . self::legacy_prefix() . 'invoice_settings', 'woocommerce_patsacbr_invoice_settings') || !self::migrate_dynamic_payment_options()) {
+                return false;
+            }
+            update_option('patsacbr_prefix_migration_version', self::VERSION, false);
+            if (self::VERSION !== (string) get_option('patsacbr_prefix_migration_version', '')) {
+                return false;
+            }
+            self::cleanup_legacy_schedules();
+            return true;
+        } finally {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the matching migration advisory lock even after failure.
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
+        }
+    }
 
-        // WooCommerce email settings are stored under woocommerce_{email-id}_settings,
-        // so they need an explicit migration in addition to the plugin options above.
-        self::migrate_option(
-            'woocommerce_' . self::legacy_prefix() . 'invoice_settings',
-            'woocommerce_patsacbr_invoice_settings'
-        );
-
-        self::migrate_dynamic_payment_options();
-
-        self::cleanup_legacy_schedules();
-        update_option('patsacbr_prefix_migration_version', self::VERSION, false);
+    private static function lock_name() {
+        global $wpdb;
+        return 'patsacbr_migrate_' . substr(hash('sha256', DB_NAME . '|' . $wpdb->prefix), 0, 40);
     }
 
     private static function migrate_option($legacy_key, $new_key) {
-        $sentinel = '__patsacbr_missing_option__';
-        if ($sentinel !== get_option($new_key, $sentinel)) {
-            return;
-        }
-
+        $sentinel = new stdClass();
         $legacy_value = get_option($legacy_key, $sentinel);
         if ($sentinel === $legacy_value) {
-            return;
+            return true;
         }
-
-        update_option($new_key, $legacy_value, false);
-        delete_option($legacy_key);
+        $new_value = get_option($new_key, $sentinel);
+        if ($sentinel !== $new_value && $new_value !== $legacy_value) {
+            return false;
+        }
+        if ($sentinel === $new_value) {
+            // add_option never overwrites a canonical value created concurrently.
+            add_option($new_key, $legacy_value, '', false);
+            if (get_option($new_key, $sentinel) !== $legacy_value) {
+                return false;
+            }
+        }
+        if (!delete_option($legacy_key)) {
+            // WordPress may evict option caches before the DELETE fails. Remove
+            // negative/alloptions caches too so the preserved source is visible.
+            wp_cache_delete($legacy_key, 'options');
+            wp_cache_delete('alloptions', 'options');
+            wp_cache_delete('notoptions', 'options');
+            return false;
+        }
+        return $sentinel === get_option($legacy_key, $sentinel);
     }
 
     /**
@@ -146,6 +172,9 @@ final class PATSACBR_Legacy_Migration {
                 $like
             ));
 
+            if ('' !== $wpdb->last_error || !is_array($option_names)) {
+                return false;
+            }
             foreach ($option_names as $legacy_key) {
                 $legacy_key = (string) $legacy_key;
                 if (0 !== strpos($legacy_key, $expected_prefix)) {
@@ -157,12 +186,12 @@ final class PATSACBR_Legacy_Migration {
                     continue;
                 }
 
-                self::migrate_option(
-                    $legacy_key,
-                    'patsacbr_' . $setting_prefix . $gateway_id
-                );
+                if (!self::migrate_option($legacy_key, 'patsacbr_' . $setting_prefix . $gateway_id)) {
+                    return false;
+                }
             }
         }
+        return true;
     }
 
     private static function register_order_meta_fallbacks() {
@@ -204,19 +233,59 @@ final class PATSACBR_Legacy_Migration {
         return $legacy_value;
     }
 
+    /**
+     * Move the original table without copying or renumbering queue rows.
+     * Schema upgrades happen afterwards through dbDelta. Two populated tables
+     * require manual resolution; never merge with INSERT IGNORE or discard rows.
+     */
     public static function migrate_queue_table() {
         global $wpdb;
-
-        $legacy_table = $wpdb->prefix . self::legacy_prefix() . 'queue';
-        $new_table = $wpdb->prefix . 'patsacbr_queue';
-        $legacy_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($legacy_table))); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration of a plugin-owned table.
-        if ($legacy_table !== $legacy_exists) {
-            return;
+        $lock = self::lock_name();
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Serialize schema migration and preserve source tables on database failures.
+        if ('1' !== (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 0)', $lock))) {
+            return false;
         }
-
-        $result = $wpdb->query($wpdb->prepare('INSERT IGNORE INTO %i SELECT * FROM %i', $new_table, $legacy_table)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- migration between plugin-owned tables.
-        if (false !== $result) {
-            $wpdb->query($wpdb->prepare('DROP TABLE IF EXISTS %i', $legacy_table)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- remove the plugin-owned legacy table only after a successful copy.
+        try {
+            $legacy_table = $wpdb->prefix . self::legacy_prefix() . 'queue';
+            $new_table = $wpdb->prefix . 'patsacbr_queue';
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Inspect plugin-owned tables before atomic rename.
+            $legacy_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($legacy_table)));
+            if ('' !== $wpdb->last_error) {
+                return false;
+            }
+            if ($legacy_table !== $legacy_exists) {
+                return true;
+            }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Inspect the destination before moving the original table.
+            $new_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($new_table)));
+            if ('' !== $wpdb->last_error) {
+                return false;
+            }
+            if ($new_table === $new_exists) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- A verified empty legacy table has no work to preserve.
+                $legacy_count = $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i', $legacy_table));
+                if ('' !== $wpdb->last_error || null === $legacy_count) {
+                    return false;
+                }
+                if (0 === (int) $legacy_count) {
+                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Remove only the verified empty legacy table.
+                    return false !== $wpdb->query($wpdb->prepare('DROP TABLE %i', $legacy_table));
+                }
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Only a verified empty destination may be removed.
+                $count = $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i', $new_table));
+                if ('' !== $wpdb->last_error || null === $count || (int) $count > 0) {
+                    return false;
+                }
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Drop only the verified empty plugin-owned destination; the complete legacy source remains recoverable.
+                if (false === $wpdb->query($wpdb->prepare('DROP TABLE %i', $new_table))) {
+                    return false;
+                }
+            }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Atomic rename preserves every original row regardless of old column count/order.
+            return false !== $wpdb->query($wpdb->prepare('RENAME TABLE %i TO %i', $legacy_table, $new_table));
+        } finally {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the migration advisory lock on every path.
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
         }
     }
 

@@ -1228,3 +1228,8 @@ msgstr ""
 #, php-format
 msgid "Order #%s"
 msgstr ""
+
+
+#: patsch9-accounting-bridge.php
+msgid "Accounting Bridge is paused because its data migration could not complete. Legacy data has been preserved. Resolve conflicting settings or queue tables and database errors, then reload this page to retry."
+msgstr ""

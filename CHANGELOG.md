@@ -2,6 +2,15 @@
 
 Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
 
+## 2026.10.6 – Noch nicht veröffentlicht
+
+- Fehlgeschlagene Optionsmigrationen und abweichende Alt-/Neuwerte stoppen die Initialisierung; alte Werte werden erst nach verifizierter Übernahme entfernt.
+- Alte Queue-Tabellen werden unter Sperre atomar umbenannt und anschließend per dbDelta aktualisiert; zwei belegte Tabellen bleiben zur manuellen Konfliktlösung erhalten.
+- Datenbankschema und Deduplizierungsindex werden vor dem Versionsmarker geprüft; unterbrochene Upgrades bleiben wiederaufnehmbar.
+- Gemeinsame Bestellsperre für alle Rechnungsaktionen sowie manuelle Verknüpfungsänderungen; neue Metadaten werden nach Sperrerwerb geladen.
+- Unklare Schreibzustände sperren auch andere Aktionen derselben Bestellung; konkurrierende Requests verbrauchen keine Wiederholungsversuche.
+- Integrationstests mit echten Datenbankfehlern und zweiter Verbindung ergänzt.
+
 ## 2026.10.5 – 2026-10-12
 
 - Rental-Metadaten unter `_rmwc_*` werden bei Kautionen und Zahlungsbedingungen erkannt; historische `_clr_*`-Bestellungen bleiben als Fallback unterstützt.

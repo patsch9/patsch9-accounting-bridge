@@ -8,3 +8,8 @@
 - [SECURITY.md](SECURITY.md) – Sicherheitsrichtlinie und Meldeweg.
 - [LICENSE](LICENSE) – Lizenztext.
 - [languages/README.txt](languages/README.txt) – Sprachdateien, WP-CLI-Befehle und WordPress.org-Übersetzungsablauf.
+
+
+## Prüfungen der Korrekturen vom 12.10.2026
+
+`tests/test-upgrade-locks.php` prüft Options-/Tabellenmigrationen mit gezielt ausgelösten Datenbankfehlern, Wiederaufnahme, Konflikterhalt und Bestellsperren mit einer zweiten echten Datenbankverbindung. Nur in der ausdrücklich freigegebenen wegwerfbaren CI-Testdatenbank ausführen. Externe API-Schreibvorgänge sind kein Bestandteil dieses Tests.
