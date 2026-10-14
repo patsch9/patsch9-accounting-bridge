@@ -3,7 +3,7 @@
  * Plugin Name: Patsch9 Accounting Bridge for WooCommerce
  * Plugin URI: https://github.com/patsch9/patsch9-accounting-bridge
  * Description: Automatic Lexware Office invoices from WooCommerce orders with synchronization and customer account integration.
- * Version: 2026.10.6
+ * Version: 2026.10.7
  * Author: Patrick Schmidt
  * Author URI: https://github.com/patsch9
  * License: GPLv2 or later
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin-Konstanten definieren
-define('PATSACBR_VERSION', '2026.10.6');
+define('PATSACBR_VERSION', '2026.10.7');
 define('PATSACBR_DB_VERSION', '1.4.1');
 define('PATSACBR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PATSACBR_PLUGIN_URL', plugin_dir_url(__FILE__));

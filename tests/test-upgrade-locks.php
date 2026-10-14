@@ -115,6 +115,102 @@ try {
 }
 $check('1' === (string) $other->get_var($other->prepare('SELECT GET_LOCK(%s, 0)', $lock)), 'Exception releases the order lock');
 $other->get_var($other->prepare('SELECT RELEASE_LOCK(%s)', $lock));
+
+// Manual form data must pass nonce/capability checks before it reaches the lock.
+// The lock callback must use the checked snapshot, not read $_POST again.
+$original_post = $_POST;
+$original_user = get_current_user_id();
+$admins = get_users(['role' => 'administrator', 'number' => 1, 'fields' => 'ID']);
+$check(!empty($admins), 'Disposable environment provides an administrator');
+wp_set_current_user($admins[0]);
+$integration = PATSACBR_WooCommerce_Integration::get_instance();
+$manual_order = wc_create_order();
+$manual_order_id = $manual_order->get_id();
+$manual_lock = 'patsacbr_order_' . substr(hash('sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $manual_order_id), 0, 40);
+$manual_id = '22222222-2222-4222-8222-222222222222';
+$manual_meta = static function($key) use ($manual_order_id) {
+    $fresh = wc_get_order($manual_order_id);
+    $fresh->read_meta_data(true);
+    return $fresh->get_meta($key);
+};
+$form = static function() use ($manual_order_id, $manual_id) {
+    return [
+        'patsacbr_manual_invoice_nonce' => wp_create_nonce('patsacbr_save_manual_invoice_' . $manual_order_id),
+        'patsacbr_manual_invoice_id' => $manual_id,
+        'patsacbr_manual_invoice_number' => wp_slash(" <b>INV-2026/O'Brien</b> "),
+    ];
+};
+try {
+    $_POST = $form();
+    unset($_POST['patsacbr_manual_invoice_nonce']);
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Missing nonce prevents manual link');
+    $_POST = $form();
+    $_POST['patsacbr_manual_invoice_nonce'] = 'invalid';
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Invalid nonce prevents manual link');
+    $_POST = $form();
+    $_POST['patsacbr_manual_invoice_nonce'] = wp_create_nonce('patsacbr_save_manual_invoice_' . ($manual_order_id + 1));
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Nonce for another order prevents manual link');
+    $_POST = $form();
+    $_POST['patsacbr_manual_invoice_nonce'] = [$_POST['patsacbr_manual_invoice_nonce']];
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Array nonce is rejected without a type error');
+    wp_set_current_user(0);
+    $_POST = $form();
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Valid nonce without order-edit capability prevents manual link');
+    $check(0 === count(wc_get_order_notes(['order_id' => $manual_order_id])), 'Rejected authorization has no order-note side effects');
+    wp_set_current_user($admins[0]);
+    foreach (['patsacbr_manual_invoice_id', 'patsacbr_manual_invoice_number'] as $field) {
+        $_POST = $form();
+        $_POST[$field] = [$_POST[$field]];
+        $integration->save_manual_invoice_data($manual_order_id);
+        $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Array field cannot create a manual link: ' . $field);
+    }
+    $_POST = $form();
+    $_POST['patsacbr_manual_invoice_id'] = 'not-a-uuid';
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Malformed UUID prevents manual link');
+    $_POST = $form();
+    unset($_POST['patsacbr_manual_invoice_number']);
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Incomplete manual link is not saved');
+    $check('1' === (string) $other->get_var($other->prepare('SELECT GET_LOCK(%s, 0)', $manual_lock)), 'Second connection acquires manual order lock');
+    $_POST = $form();
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Busy order prevents manual metadata write');
+    $other->get_var($other->prepare('SELECT RELEASE_LOCK(%s)', $manual_lock));
+    $_POST = $form();
+    $post_changed = false;
+    $mutate_post = static function($sql) use ($manual_lock, &$post_changed) {
+        if (false !== strpos($sql, 'GET_LOCK') && false !== strpos($sql, $manual_lock)) {
+            $post_changed = true;
+            $_POST['patsacbr_manual_invoice_id'] = '33333333-3333-4333-8333-333333333333';
+            $_POST['patsacbr_manual_invoice_number'] = 'UNVERIFIED';
+        }
+        return $sql;
+    };
+    add_filter('query', $mutate_post);
+    try {
+        $integration->save_manual_invoice_data($manual_order_id);
+    } finally {
+        remove_filter('query', $mutate_post);
+    }
+    $check($post_changed && $manual_id === $manual_meta('_patsacbr_lexware_invoice_id'), 'Locked callback uses the verified request snapshot');
+    $check("INV-2026/O'Brien" === $manual_meta('_patsacbr_lexware_invoice_number'), 'Manual invoice number is unslashed and sanitized');
+    $check('yes' === $manual_meta('_patsacbr_manual_invoice_entry'), 'Valid manual link retains its marker');
+    $_POST = $form();
+    $_POST['patsacbr_manual_invoice_id'] = '44444444-4444-4444-8444-444444444444';
+    $integration->save_manual_invoice_data($manual_order_id);
+    $check($manual_id === $manual_meta('_patsacbr_lexware_invoice_id'), 'Existing invoice link cannot be overwritten');
+} finally {
+    $other->get_var($other->prepare('SELECT RELEASE_LOCK(%s)', $manual_lock));
+    $_POST = $original_post;
+    wp_set_current_user($original_user);
+    $manual_order->delete(true);
+}
 $other->close();
 $order->delete(true);
 WP_CLI::success($checks . ' migration and order-lock regression checks passed.');

@@ -2,7 +2,14 @@
 
 Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
 
-## 2026.10.6 – Noch nicht veröffentlicht
+## 2026.10.7 – Noch nicht veröffentlicht
+
+- Manuelle Rechnungsdaten werden direkt nach Nonce- und Berechtigungsprüfung bereinigt und als Werte an den Bestellsperr-Callback übergeben. Array-Eingaben werden abgefangen.
+- WordPress Plugin Check läuft auch in PRs streng; jeder PR nach `main` prüft zusätzlich das tatsächlich gebaute Release-Paket.
+- Regressionstests für Nonces, Berechtigungen, Eingabevalidierung und manuelle Verknüpfungen unter Bestellsperre ergänzt.
+- Enthält die folgenden Migrations- und Sperrkorrekturen aus dem blockierten Release 2026.10.6.
+
+## 2026.10.6 – Veröffentlichung am 2026-10-14 durch Plugin Check blockiert
 
 - Fehlgeschlagene Optionsmigrationen und abweichende Alt-/Neuwerte stoppen die Initialisierung; alte Werte werden erst nach verifizierter Übernahme entfernt.
 - Alte Queue-Tabellen werden unter Sperre atomar umbenannt und anschließend per dbDelta aktualisiert; zwei belegte Tabellen bleiben zur manuellen Konfliktlösung erhalten.

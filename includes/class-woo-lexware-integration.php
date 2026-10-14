@@ -154,7 +154,7 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
      */
     public function save_manual_invoice_data($order_id) {
         // Sicherheitsprüfung
-        if (!isset($_POST['patsacbr_manual_invoice_nonce']) ||
+        if (!isset($_POST['patsacbr_manual_invoice_nonce']) || !is_string($_POST['patsacbr_manual_invoice_nonce']) ||
             !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_nonce'])), 'patsacbr_save_manual_invoice_' . $order_id)) {
             return;
         }
@@ -164,7 +164,14 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
             return;
         }
 
-        PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id) {
+        // Read request data in the same scope as nonce verification. The locked
+        // callback receives only sanitized values, never the mutable request.
+        $manual_invoice_id = isset($_POST['patsacbr_manual_invoice_id']) && is_string($_POST['patsacbr_manual_invoice_id']) ?
+            sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_id'])) : '';
+        $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) && is_string($_POST['patsacbr_manual_invoice_number']) ?
+            sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
+
+        PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id, $manual_invoice_id, $manual_invoice_number) {
             $order = wc_get_order($order_id);
             if (!$order) {
                 return;
@@ -177,12 +184,6 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
             if ($existing_invoice_id) {
                 return; // Keine Änderung wenn bereits eine Rechnung verknüpft ist
             }
-
-            // Hole die manuellen Eingaben
-            $manual_invoice_id = isset($_POST['patsacbr_manual_invoice_id']) ?
-                sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_id'])) : '';
-            $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) ?
-                sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
 
             // Lexware resource IDs are UUIDs. Reject malformed manual links so a
             // typo cannot poison later download/correction operations.

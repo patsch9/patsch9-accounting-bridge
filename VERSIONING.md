@@ -39,8 +39,8 @@ Für ein stabiles Release müssen diese Angaben übereinstimmen:
 
 | Workflow | Auslöser | Aufgabe |
 | --- | --- | --- |
-| `static-checks.yml` | PRs nach `main`, Pushes nach `main` | PHP 8.2/8.3/8.4, JavaScript, Übersetzungskataloge und WordPress Plugin Check. |
-| `release.yml` | `v*`-Tags; PRs mit Änderungen an Release-Workflow oder `.distignore` | Installierbares ZIP prüfen; ausschließlich Tag-Läufe veröffentlichen ein GitHub Release. |
+| `static-checks.yml` | PRs nach `main`, Pushes nach `main` | PHP 8.2/8.3/8.4, JavaScript, Übersetzungskataloge und strikter WordPress Plugin Check. |
+| `release.yml` | `v*`-Tags; alle PRs nach `main` | Installierbares ZIP prüfen; ausschließlich Tag-Läufe veröffentlichen ein GitHub Release. |
 | `wordpress-org-deploy.yml` | Erfolgreicher Release-Tag-Lauf; manuell mit expliziter Tag-Eingabe | Verifiziertes stabiles GitHub-Release nach WordPress.org übertragen. |
 
 Dependabot bleibt für wöchentliche Updates der verwendeten Actions aktiv. Die
@@ -49,7 +49,10 @@ Prüfungen laufen weiterhin. Action-Versionen bleiben auf Commit-SHAs fixiert.
 
 Feature-Branches werden durch den PR geprüft. Dadurch laufen identische Prüfungen
 nicht zusätzlich für jeden Branch-Push. Tag-Pushes starten nur den Release-Bau;
-dieser prüft das tatsächlich ausgelieferte Paket. Neuere PR-Commits ersetzen noch
+dieser prüft das tatsächlich ausgelieferte Paket. Dieselbe Paketprüfung läuft
+bereits für jeden PR nach `main`, einschließlich der Release-Metadaten. Beide
+Plugin-Check-Läufe verwenden `strict: true`, sodass Warnungen den Check stoppen.
+Neuere PR-Commits ersetzen noch
 laufende ältere Prüfungen. Veröffentlichungs- und Deploy-Läufe werden nicht
 automatisch wegen neuerer Commits abgebrochen.
 
@@ -100,6 +103,17 @@ GitHub Releases werden durch `.github/workflows/release.yml` automatisch aus Git
 7. Erst nach erfolgreichen Prüfungen werden ZIP und SHA-256-Prüfsumme als GitHub Release veröffentlicht.
 
 Tags mit `-alpha.N`, `-beta.N` oder `-rc.N` werden automatisch als GitHub-Pre-Release markiert. Bei Vorabversionen bleibt der WordPress.org-`Stable tag` auf der letzten stabilen Version.
+
+### Fehlgeschlagene Release-Tags
+
+Ein erneuter Lauf eines fehlgeschlagenen Tag-Workflows verwendet weiterhin den
+Code dieses Tags. Änderungen auf `main` reparieren diesen bestehenden Tag nicht.
+Bei notwendigen Codekorrekturen bleibt der vorhandene Tag unverändert; der
+korrigierte Stand erhält die nächste Patch-Version und einen neuen Tag.
+
+`v2026.10.6` wurde am 14.10.2026 durch Nonce-Warnungen im strengen Plugin Check
+blockiert. Die PR-Prüfung war zuvor nicht streng und prüfte das Release-Paket nur
+bei Änderungen an Release-Dateien. Die Korrektur wird als `2026.10.7` vorbereitet.
 
 ## WordPress.org-Veröffentlichung
 

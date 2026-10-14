@@ -62,6 +62,7 @@ jobs:
       - name: WordPress Plugin Check
         uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1
         with:
+          strict: true
           exclude-directories: |
             .github
             tests

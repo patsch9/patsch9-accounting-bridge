@@ -5,9 +5,8 @@ on:
     tags:
       - 'v*'
   pull_request:
-    paths:
-      - '.github/workflows/release.yml'
-      - '.distignore'
+    branches:
+      - main
 
 concurrency:
   group: release-${{ github.ref }}
