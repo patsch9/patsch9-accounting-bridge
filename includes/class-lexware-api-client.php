@@ -684,13 +684,6 @@ class PATSACBR_API_Client {
     }
 
     /**
-     * Download the legally relevant invoice representation to a private temp file.
-     * Regular/ZUGFeRD invoices are PDF. XRechnung is XML; its Lexware PDF is only
-     * a preview and must not be presented as the e-invoice.
-     *
-     * @return array|WP_Error {path,mime,extension,profile}
-     */
-    /**
      * Write a private temporary invoice document atomically with its final extension.
      *
      * @param string $binary    Document bytes.
@@ -747,6 +740,13 @@ class PATSACBR_API_Client {
         return new WP_Error('temp_file', __('The temporary invoice document could not be created.', 'patsch9-accounting-bridge'));
     }
 
+    /**
+     * Download the legally relevant invoice representation to a private temp file.
+     * Regular/ZUGFeRD invoices are PDF. XRechnung is XML; its Lexware PDF is only
+     * a preview and must not be presented as the e-invoice.
+     *
+     * @return array|WP_Error {path,mime,extension,profile}
+     */
     public function download_invoice_document($invoice_id) {
         $invoice_id = sanitize_text_field((string) $invoice_id);
         if (!$this->is_valid_uuid($invoice_id)) {
