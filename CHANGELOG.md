@@ -2,6 +2,14 @@
 
 Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
 
+## 2026.10.8 – Noch nicht veröffentlicht
+
+- Historische Umsatzsteuersätze werden zuerst aus den Steuerpositionen der Bestellung gelesen; gelöschte aktuelle WooCommerce-Steuerregeln können dadurch keine besteuerten Positionen mehr fälschlich auf 0 % setzen.
+- Falls weder historische noch aktuelle Steuerdaten den Satz liefern, wird er aus den gespeicherten Netto- und Steuerbeträgen berechnet; auch negative steuerpflichtige Gebühren werden korrekt behandelt.
+- Lexware erhält `gross`/`net` anhand der in der Bestellung gespeicherten WooCommerce-Preisdarstellung statt anhand eines ausgefüllten Firmenfelds.
+- Temporäre PDF-/XML-Belege werden exklusiv und atomar mit finaler Dateiendung und restriktiven Dateirechten erzeugt.
+- Nicht mehr verwendete Berechnungsmethoden und die ungenutzte Rate-Limit-Property wurden entfernt.
+
 ## 2026.10.7 – Noch nicht veröffentlicht
 
 - Manuelle Rechnungsdaten werden direkt nach Nonce- und Berechtigungsprüfung bereinigt und als Werte an den Bestellsperr-Callback übergeben. Array-Eingaben werden abgefangen.
