@@ -91,7 +91,7 @@ if ( 'custom' !== $lines[0]['type'] ) {
 }
 ++$checks;
 
-// Historical order tax metadata must win when the current WooCommerce tax rule was deleted.
+// Historical order tax metadata is authoritative when the current WooCommerce tax rule was deleted.
 WC_Tax::$rates = [ 42 => 0.0 ];
 $historic_item = new PATSACBR_Test_Fee( [], 100.0, 19.0, 'taxable', [ 'total' => [ 42 => 19.0 ], 'subtotal' => [ 42 => 19.0 ] ] );
 $historic_order = new WC_Order( [], [], [ new PATSACBR_Test_Order_Tax( 42, 19.0 ) ] );
