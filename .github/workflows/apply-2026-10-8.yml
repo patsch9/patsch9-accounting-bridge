@@ -1,5 +1,6 @@
 name: Apply 2026.10.8 hardening patch
 
+# Controlled one-shot workflow; removed by its successful commit.
 on:
   push:
     branches:
