@@ -1,0 +1,47 @@
+name: Align 2026.10.8 invoice docblock
+
+on:
+  push:
+    branches:
+      - fix/2026.10.8-tax-temp-hardening
+    paths:
+      - .github/workflows/fix-2026-10-8-docblock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/2026.10.8-tax-temp-hardening
+      - name: Move public-method documentation to the public method
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('includes/class-lexware-api-client.php')
+          text = path.read_text(encoding='utf-8')
+          public_doc = '''    /**\n     * Download the legally relevant invoice representation to a private temp file.\n     * Regular/ZUGFeRD invoices are PDF. XRechnung is XML; its Lexware PDF is only\n     * a preview and must not be presented as the e-invoice.\n     *\n     * @return array|WP_Error {path,mime,extension,profile}\n     */\n'''
+          if text.count(public_doc) != 1:
+              raise SystemExit('Expected exactly one invoice-document docblock.')
+          text = text.replace(public_doc, '', 1)
+          marker = '    public function download_invoice_document($invoice_id) {\n'
+          if text.count(marker) != 1:
+              raise SystemExit('Expected exactly one download_invoice_document method.')
+          text = text.replace(marker, public_doc + marker, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          php -l includes/class-lexware-api-client.php
+      - name: Commit cleanup and remove helper workflow
+        shell: bash
+        run: |
+          rm .github/workflows/fix-2026-10-8-docblock.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: align invoice document method comment"
+          git push origin HEAD:fix/2026.10.8-tax-temp-hardening
