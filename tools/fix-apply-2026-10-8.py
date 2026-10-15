@@ -7,4 +7,12 @@ old = '''# Remove two remaining unused legacy calculation methods.\nfor name, ne
 new = '''# Remove only the exact unused private method bodies. Avoid broad DOTALL regexes:\n# they can cross unrelated methods when docblocks are present.\ndef remove_private_method(name):\n    global text\n    signature = f"    private function {name}("\n    if text.count(signature) != 1:\n        raise SystemExit(f'legacy method removal {name}: expected exactly one signature')\n    signature_start = text.index(signature)\n    brace_start = text.index('{', signature_start)\n    depth = 0\n    method_end = None\n    for index in range(brace_start, len(text)):\n        char = text[index]\n        if char == '{':\n            depth += 1\n        elif char == '}':\n            depth -= 1\n            if depth == 0:\n                method_end = index + 1\n                break\n    if method_end is None:\n        raise SystemExit(f'legacy method removal {name}: closing brace not found')\n\n    start = signature_start\n    doc_start = text.rfind("    /**", 0, signature_start)\n    if doc_start >= 0:\n        between = text[doc_start:signature_start]\n        if between.lstrip().startswith('/**') and between.rstrip().endswith('*/') and 'function ' not in between:\n            start = doc_start\n\n    while method_end < len(text) and text[method_end] in '\\r\\n':\n        method_end += 1\n    text = text[:start] + text[method_end:]\n\nremove_private_method('get_total_discount')\nremove_private_method('calculate_items_subtotal')\n\n'''
 if text.count(old) != 1:
     raise SystemExit('Unsafe legacy cleanup block not found exactly once.')
-path.write_text(text.replace(old, new, 1), encoding='utf-8')
+text = text.replace(old, new, 1)
+
+old_test_bootstrap = '''test_text = test_text.replace(needle, needle + "function absint( $value ) { return abs( (int) $value ); }\\n", 1)'''
+new_test_bootstrap = '''test_text = test_text.replace(needle, needle + "function absint( $value ) { return abs( (int) $value ); }\\n" + "if ( ! defined( 'MB_IN_BYTES' ) ) { define( 'MB_IN_BYTES', 1048576 ); }\\n", 1)'''
+if text.count(old_test_bootstrap) != 1:
+    raise SystemExit('Test bootstrap insertion anchor not found exactly once.')
+text = text.replace(old_test_bootstrap, new_test_bootstrap, 1)
+
+path.write_text(text, encoding='utf-8')
