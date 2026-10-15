@@ -22,6 +22,8 @@ jobs:
         with:
           php-version: '8.2'
           coverage: none
+      - name: Prepare structurally scoped patch helper
+        run: python3 tools/fix-apply-2026-10-8.py
       - name: Apply reviewed patch
         run: python3 tools/apply-2026-10-8.py
       - name: Validate patched sources
@@ -39,7 +41,7 @@ jobs:
       - name: Commit reviewed patch and remove helpers
         shell: bash
         run: |
-          rm .github/workflows/apply-2026-10-8.yml tools/apply-2026-10-8.py
+          rm .github/workflows/apply-2026-10-8.yml tools/apply-2026-10-8.py tools/fix-apply-2026-10-8.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
