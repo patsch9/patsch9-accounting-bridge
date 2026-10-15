@@ -4,7 +4,7 @@ Tags: woocommerce, lexware, invoices, accounting, api
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2026.10.7
+Stable tag: 2026.10.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,12 @@ Not by default. Full data cleanup on uninstall must be explicitly enabled in the
 English is the source language. A complete German (de_DE) translation is bundled, including customer emails and invoice text defaults for new installations. Existing custom invoice texts and saved email settings are preserved. Additional translations can be contributed at https://translate.wordpress.org/projects/wp-plugins/patsch9-accounting-bridge/.
 
 == Changelog ==
+
+= 2026.10.8 =
+* Preserve historical WooCommerce tax percentages when live tax rules were deleted or changed, with a safe amount-based fallback including negative taxable fees.
+* Derive Lexware gross/net invoice mode from the order snapshot instead of the presence of a company name.
+* Create PDF/XML invoice attachments atomically with restrictive permissions and their final file extension.
+* Remove unused legacy invoice-calculation helpers.
 
 = 2026.10.7 =
 * Read and sanitize manual invoice fields immediately after nonce verification, before acquiring the order lock. Reject array-valued request fields.

@@ -14,7 +14,6 @@ class PATSACBR_API_Client {
     const VOUCHER_PREFIX = 'Wertgutschein'; // Germanized Wertgutschein Präfix
 
     private $api_key;
-    private $last_request_time = 0;
     private $request_times = array(); // Für Tracking der Requests im Zeitfenster
     public function __construct() {
         $key = defined('PATSACBR_LEXWARE_API_KEY') && is_scalar(PATSACBR_LEXWARE_API_KEY)
@@ -332,6 +331,19 @@ class PATSACBR_API_Client {
         return $result;
     }
 
+    /** Determine Lexware's price mode from the order snapshot, not customer type. */
+    private function invoice_tax_type($order) {
+        if ($order && is_callable(array($order, 'get_prices_include_tax'))) {
+            return $order->get_prices_include_tax() ? 'gross' : 'net';
+        }
+        // Compatibility fallback for lightweight integrations/mocks. A real
+        // WC_Order exposes get_prices_include_tax(), preserving historical orders.
+        if (function_exists('wc_prices_include_tax')) {
+            return wc_prices_include_tax() ? 'gross' : 'net';
+        }
+        return 'gross';
+    }
+
     public function create_invoice($order, $contact_id) {
         if (!$order instanceof WC_Order) {
             return new WP_Error('invalid_order', __('Invalid order', 'patsch9-accounting-bridge'));
@@ -350,9 +362,9 @@ class PATSACBR_API_Client {
             return new WP_Error('missing_order_date', __('Order date missing.', 'patsch9-accounting-bridge'));
         }
         $voucher_date = $this->format_lexware_date($order_date->getTimestamp());
-        // Keep the historic display preference (B2B net, B2C gross), while all
-        // monetary values below are derived from WooCommerce's final line totals.
-        $tax_type = !empty($order->get_billing_company()) ? 'net' : 'gross';
+        // Preserve the pricing mode stored on this exact WooCommerce order.
+        // A company name does not imply net pricing and must not alter rounding.
+        $tax_type = $this->invoice_tax_type($order);
         $line_items = $this->format_line_items($order, false, $tax_type);
         $line_items = array_merge($line_items, $this->format_voucher_redemptions($order, $tax_type));
         if (!$line_items) {
@@ -678,6 +690,63 @@ class PATSACBR_API_Client {
      *
      * @return array|WP_Error {path,mime,extension,profile}
      */
+    /**
+     * Write a private temporary invoice document atomically with its final extension.
+     *
+     * @param string $binary    Document bytes.
+     * @param string $extension pdf or xml.
+     * @return string|WP_Error
+     */
+    private function write_temporary_invoice_document($binary, $extension) {
+        $extension = strtolower((string) $extension);
+        if (!in_array($extension, array('pdf', 'xml'), true)) {
+            return new WP_Error('temp_file', __('The temporary invoice document could not be created.', 'patsch9-accounting-bridge'));
+        }
+        $bytes = (string) $binary;
+        $length = strlen($bytes);
+        if ($length < 5 || $length > 20 * MB_IN_BYTES) {
+            return new WP_Error('temp_file', __('The temporary invoice document could not be created.', 'patsch9-accounting-bridge'));
+        }
+
+        $temp_dir = trailingslashit(get_temp_dir());
+        $system_temp = function_exists('sys_get_temp_dir') ? sys_get_temp_dir() : '';
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Prefer the OS temp directory for short-lived, permission-restricted attachments outside potentially web-accessible WordPress paths.
+        if (is_string($system_temp) && '' !== $system_temp && is_dir($system_temp) && is_writable($system_temp)) {
+            $temp_dir = trailingslashit($system_temp);
+        }
+
+        for ($attempt = 0; $attempt < 8; $attempt++) {
+            $suffix = strtolower(wp_generate_password(16, false, false));
+            $path = $temp_dir . 'patsacbr-invoice-' . $suffix . '.' . $extension;
+            $old_umask = umask(0077);
+            $handle = @fopen($path, 'xb'); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive transient file; restrictive umask is set before creation.
+            umask($old_umask);
+            if (false === $handle) {
+                continue;
+            }
+            @chmod($path, 0600); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Defense in depth after restrictive creation mode.
+
+            $offset = 0;
+            $write_ok = true;
+            while ($offset < $length) {
+                $written = fwrite($handle, substr($bytes, $offset)); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Generated transient attachment in OS temp directory.
+                if (false === $written || 0 === $written) {
+                    $write_ok = false;
+                    break;
+                }
+                $offset += $written;
+            }
+            fclose($handle); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+            if (!$write_ok || $offset !== $length) {
+                @unlink($path); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,WordPress.WP.AlternativeFunctions.unlink_unlink -- Cleanup of the transient file created above.
+                continue;
+            }
+            return $path;
+        }
+
+        return new WP_Error('temp_file', __('The temporary invoice document could not be created.', 'patsch9-accounting-bridge'));
+    }
+
     public function download_invoice_document($invoice_id) {
         $invoice_id = sanitize_text_field((string) $invoice_id);
         if (!$this->is_valid_uuid($invoice_id)) {
@@ -720,22 +789,10 @@ class PATSACBR_API_Client {
             $mime = 'application/pdf';
         }
 
-        $tmp = wp_tempnam('patsacbr-invoice.' . $extension);
-        if (!$tmp) {
-            return new WP_Error('temp_file', __('The temporary invoice document could not be created.', 'patsch9-accounting-bridge'));
+        $path = $this->write_temporary_invoice_document($binary, $extension);
+        if (is_wp_error($path)) {
+            return $path;
         }
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        global $wp_filesystem;
-        if (empty($wp_filesystem) && !WP_Filesystem()) {
-            wp_delete_file($tmp);
-            return new WP_Error('filesystem', __('The WordPress filesystem is unavailable.', 'patsch9-accounting-bridge'));
-        }
-        $path = $tmp . '.' . $extension;
-        if (!$wp_filesystem->put_contents($path, $binary, 0600)) {
-            $wp_filesystem->delete($tmp);
-            return new WP_Error('invoice_write', __('The temporary invoice document could not be written.', 'patsch9-accounting-bridge'));
-        }
-        $wp_filesystem->delete($tmp);
         return array('path' => $path, 'mime' => $mime, 'extension' => $extension, 'profile' => $profile);
     }
 
@@ -783,88 +840,6 @@ class PATSACBR_API_Client {
         }
 
         return $address;
-    }
-    /**
-     * Berechnet den Gesamtrabatt (alle Gutscheine/Coupons zusammen, OHNE Wertgutscheine)
-     * Wertgutscheine werden als separate Line Items behandelt
-     *
-     * @param WC_Order $order Die WooCommerce Bestellung
-     * @return float Der Rabattbetrag (ohne Wertgutscheine)
-     */
-    private function get_total_discount($order) {
-        $total_discount = 0.0;
-        $coupon_codes = $order->get_coupon_codes();
-
-        if (empty($coupon_codes)) {
-            return $total_discount;
-        }
-
-        foreach ($coupon_codes as $coupon_code) {
-            foreach ($order->get_items('coupon') as $coupon_item) {
-                if ($coupon_item->get_code() === $coupon_code) {
-                    $total_discount += abs($coupon_item->get_discount());
-                    break;
-                }
-            }
-        }
-
-        return round($total_discount, 2);
-    }
-    /**
-     * Berechnet Summen von Artikeln und Versand (ohne Rabatte und Wertgutscheine)
-     */
-    private function calculate_items_subtotal($order, $negative = false) {
-        $multiplier = $negative ? -1 : 1;
-        $subtotal = array(
-            'net' => 0.0,
-            'gross' => 0.0,
-            'tax' => 0.0
-        );
-
-        // Artikel (OHNE Wertgutscheine und Fee Items)
-        foreach ($order->get_items() as $item) {
-            // Überspringe Wertgutschein-Items
-            if ($this->is_value_voucher_item($item)) {
-                continue;
-            }
-
-            // get_item_subtotal() returns the price per unit. The Lexware
-            // line uses quantity separately, so the invoice subtotal must
-            // multiply the per-unit subtotal by the WooCommerce quantity.
-            $quantity = max(1, (float)$item->get_quantity());
-            $net = round($order->get_item_subtotal($item, false) * $quantity, 2);
-            $gross = round($order->get_item_subtotal($item, true) * $quantity, 2);
-
-            $subtotal['net'] += $net * $multiplier;
-            $subtotal['gross'] += $gross * $multiplier;
-            $subtotal['tax'] += ($gross - $net) * $multiplier;
-        }
-
-        // Normale WooCommerce-Gebühren (z. B. Lieferung oder Mietkaution).
-        // Wertgutscheine bleiben ausgeschlossen, weil sie separat verarbeitet werden.
-        foreach ($order->get_items('fee') as $fee_item) {
-            if ($this->is_value_voucher_item($fee_item)) {
-                continue;
-            }
-            $net = round((float)$fee_item->get_total(), 2);
-            $tax = round((float)$fee_item->get_total_tax(), 2);
-            $gross = round($net + $tax, 2);
-            $subtotal['net'] += $net * $multiplier;
-            $subtotal['gross'] += $gross * $multiplier;
-            $subtotal['tax'] += $tax * $multiplier;
-        }
-
-        // Versand
-        if (get_option('patsacbr_shipping_as_line_item', 'yes') === 'yes') {
-            $shipping_gross = round($order->get_shipping_total() + $order->get_shipping_tax(), 2);
-            $shipping_net = round($order->get_shipping_total(), 2);
-
-            $subtotal['net'] += $shipping_net * $multiplier;
-            $subtotal['gross'] += $shipping_gross * $multiplier;
-            $subtotal['tax'] += $order->get_shipping_tax() * $multiplier;
-        }
-
-        return $subtotal;
     }
     private function format_line_items($order, $negative = false, $tax_type = 'net') {
         $line_items = array();
@@ -998,41 +973,72 @@ class PATSACBR_API_Client {
     }
 
     private function get_tax_rate_for_class($tax_class, $order, $item = null) {
-        unset($tax_class, $order);
+        unset($tax_class);
         if ($this->is_rental_deposit($item)) {
             return 0.0;
         }
         if ($item && is_callable(array($item, 'get_tax_status')) && 'taxable' !== $item->get_tax_status()) {
             return 0.0;
         }
+
+        $tax_ids = array();
         if ($item && is_callable(array($item, 'get_taxes'))) {
             $taxes = $item->get_taxes();
             foreach (array('total', 'subtotal') as $bucket) {
-                if (!empty($taxes[$bucket]) && is_array($taxes[$bucket])) {
-                    foreach (array_keys($taxes[$bucket]) as $tax_id) {
-                        if (absint($tax_id) > 0 && class_exists('WC_Tax')) {
-                            return (float) WC_Tax::get_rate_percent_value(absint($tax_id));
-                        }
+                if (empty($taxes[$bucket]) || !is_array($taxes[$bucket])) {
+                    continue;
+                }
+                foreach (array_keys($taxes[$bucket]) as $tax_id) {
+                    $tax_id = absint($tax_id);
+                    if ($tax_id > 0) {
+                        $tax_ids[$tax_id] = true;
                     }
                 }
             }
         }
-        if ($item && is_callable(array($item, 'get_total_tax')) && abs((float) $item->get_total_tax()) < 0.00001) {
-            return 0.0;
-        }
-        return 0.0;
-    }
-    private function get_average_tax_rate_for_items($order) {
-        // Berechne den durchschnittlichen Steuersatz basierend auf allen Artikeln
-        if ($order->get_subtotal() > 0) {
-            $total_tax = $order->get_total_tax();
-            $items_subtotal = $order->get_subtotal();
-            if ($items_subtotal > 0 && $total_tax > 0) {
-                $rate = ($total_tax / $items_subtotal) * 100;
-                return round($rate, 2);
+        $tax_ids = array_keys($tax_ids);
+
+        // Order tax items preserve the historical percentage even when the live
+        // WooCommerce tax rule was deleted or changed after the order was placed.
+        if ($tax_ids && $order && is_callable(array($order, 'get_items'))) {
+            foreach ($order->get_items('tax') as $tax_item) {
+                if (!is_callable(array($tax_item, 'get_rate_id')) || !is_callable(array($tax_item, 'get_rate_percent'))) {
+                    continue;
+                }
+                $stored_rate_id = absint($tax_item->get_rate_id());
+                if (!in_array($stored_rate_id, $tax_ids, true)) {
+                    continue;
+                }
+                $stored_rate = (float) $tax_item->get_rate_percent();
+                if ($stored_rate > 0.0) {
+                    return $stored_rate;
+                }
             }
         }
-        return 19.0; // Fallback auf 19%
+
+        // Current WooCommerce rates remain a valid secondary source. Do not return
+        // zero here: a deleted rate resolves to 0/empty and would suppress the
+        // amount-based historical fallback below.
+        if ($tax_ids && class_exists('WC_Tax')) {
+            foreach ($tax_ids as $tax_id) {
+                $rate = (float) WC_Tax::get_rate_percent_value($tax_id);
+                if ($rate > 0.0) {
+                    return $rate;
+                }
+            }
+        }
+
+        if ($item && is_callable(array($item, 'get_total_tax')) && is_callable(array($item, 'get_total'))) {
+            $net = (float) $item->get_total();
+            $tax = (float) $item->get_total_tax();
+            if (abs($tax) < 0.00001) {
+                return 0.0;
+            }
+            if (abs($net) > 0.00001) {
+                return round(abs($tax / $net) * 100, 2);
+            }
+        }
+        return 0.0;
     }
     private function calculate_shipping_tax_rate($order) {
         foreach ($order->get_items('tax') as $tax_item) {

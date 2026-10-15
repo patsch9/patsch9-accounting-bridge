@@ -9,6 +9,8 @@ function sanitize_textarea_field( $value ) { return strip_tags( $value ); }
 function wp_strip_all_tags( $value ) { return strip_tags( $value ); }
 function get_bloginfo( $key ) { return 'UTF-8'; }
 function wc_prices_include_tax() { return false; }
+function absint( $value ) { return abs( (int) $value ); }
+if ( ! defined( 'MB_IN_BYTES' ) ) { define( 'MB_IN_BYTES', 1048576 ); }
 function get_temp_dir() { return rtrim( sys_get_temp_dir(), '/\\' ) . DIRECTORY_SEPARATOR; }
 function trailingslashit( $value ) { return rtrim( (string) $value, '/\\' ) . DIRECTORY_SEPARATOR; }
 function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ) {
