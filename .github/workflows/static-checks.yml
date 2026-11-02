@@ -1,12 +1,10 @@
 name: Static checks
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency:
   group: checks-${{ github.event.pull_request.number || github.ref }}
@@ -31,7 +29,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-          tools: wp-cli:2.12.0
+          tools: ${{ matrix.php == '8.2' && 'wp-cli:2.12.0' || 'none' }}
       - name: PHP syntax
         shell: bash
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -82,14 +80,19 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      - name: Cache npm downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-wp-env-11.16.0
       - name: Install pinned WordPress test harness
-        run: npm -g --no-fund install @wordpress/env@11.16.0
+        run: npm -g --no-fund --prefer-offline install @wordpress/env@11.16.0
       - name: Configure disposable test environment
         run: |
           cat > .wp-env.json <<EOF
           {"core": null, "testsEnvironment": false, "mappings": {"wp-content/plugins/patsch9-accounting-bridge": "$PWD"}}
           EOF
-          wp-env start --update
+          wp-env start
           wp-env run cli wp plugin install woocommerce --activate
           wp-env run cli wp plugin activate patsch9-accounting-bridge
       - name: Migration and order locks against a real database
