@@ -157,9 +157,7 @@ jobs:
           set -euo pipefail
 
           # WordPress.org assets are global directory assets rather than versioned
-          # plugin code. Load them from the current main branch even when an older
-          # already-published release tag is being deployed for the first time.
-          git fetch origin main:refs/remotes/origin/main --no-tags
+          # plugin code. The current main ref was fetched during provenance validation.
           rm -rf .wordpress-org
           git restore --source=refs/remotes/origin/main -- .wordpress-org
 
