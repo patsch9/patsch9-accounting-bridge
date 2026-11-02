@@ -4,7 +4,7 @@ Tags: woocommerce, lexware, invoices, accounting, api
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 2026.10.8
+Stable tag: 2026.11.1-beta1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -99,6 +99,11 @@ English is the source language. A complete German (de_DE) translation is bundled
 
 == Changelog ==
 
+= 2026.11.1-beta1 =
+* Belegerstellung auf ausgewählte Zahlungsarten begrenzen.
+* Prüfungen für manuelle, automatische und wartende Erstellungen sowie Rechnungsersetzungen.
+* Vorhandene Belege und Gutschriften bleiben unabhängig von der Auswahl nutzbar.
+
 = 2026.10.8 =
 * Preserve historical WooCommerce tax percentages when live tax rules were deleted or changed, with a safe amount-based fallback including negative taxable fees.
 * Derive Lexware gross/net invoice mode from the order snapshot instead of the presence of a company name.
@@ -146,3 +151,4 @@ English is the source language. A complete German (de_DE) translation is bundled
 
 = 2026.10.0 =
 First stable release of the new public version line. Back up existing prerelease installations and verify the connection with a test document after upgrading.
+

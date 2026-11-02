@@ -326,8 +326,9 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
             $order = wc_get_order($post_id);
             if (!$order) { continue; }
             if ($order->get_meta('_patsacbr_lexware_invoice_id')) { continue; }
-            PATSACBR_Queue_Handler::add_to_queue($post_id, 'create_invoice');
-            $created++;
+            if (PATSACBR_Queue_Handler::add_to_queue($post_id, 'create_invoice')) {
+                $created++;
+            }
         }
         $redirect_to = add_query_arg('patsacbr_invoices_created', $created, $redirect_to);
         return $redirect_to;
@@ -397,6 +398,9 @@ function patsacbr_ajax_manual_create_invoice() {
 
     if ($order->get_meta('_patsacbr_lexware_invoice_id')) {
         wp_send_json_error(array('message' => esc_html__('A Lexware invoice is already linked to this order. Use "Update invoice" or cancel the existing invoice.', 'patsch9-accounting-bridge')));
+    }
+    if (!PATSACBR_Payment_Policy::allows($order)) {
+        wp_send_json_error(array('message' => PATSACBR_Payment_Policy::error()->get_error_message()));
     }
     PATSACBR_Queue_Handler::add_to_queue($order_id, 'create_invoice');
     $result = PATSACBR_Queue_Handler::process_order_action($order_id, 'create_invoice');
@@ -489,6 +493,9 @@ function patsacbr_ajax_manual_update_invoice() {
     $already_voided = $order->get_meta('_patsacbr_lexware_invoice_voided');
     if (!$lexware_invoice_id || $already_voided === 'yes') {
         wp_send_json_error(array('message' => esc_html__('No valid invoice available', 'patsch9-accounting-bridge')));
+    }
+    if (!PATSACBR_Payment_Policy::allows($order)) {
+        wp_send_json_error(array('message' => PATSACBR_Payment_Policy::error()->get_error_message()));
     }
     PATSACBR_Queue_Handler::add_to_queue($order_id, 'update_invoice');
     $result = PATSACBR_Queue_Handler::process_order_action($order_id, 'update_invoice');
@@ -619,3 +626,4 @@ function patsacbr_bulk_action_admin_notice() {
         );
     }
 }
+

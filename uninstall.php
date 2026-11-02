@@ -35,6 +35,8 @@ foreach (array($patsacbr_legacy_prefix . 'process_queue', $patsacbr_legacy_prefi
 $patsacbr_options_to_delete = array(
     'patsacbr_api_key',
     'patsacbr_order_statuses',
+    'patsacbr_payment_scope',
+    'patsacbr_payment_methods',
     'patsacbr_retry_attempts',
     'patsacbr_invoice_title',
     'patsacbr_invoice_introduction',
@@ -168,3 +170,4 @@ foreach ($patsacbr_transient_prefixes as $patsacbr_transient_prefix) {
         $wpdb->esc_like($patsacbr_transient_prefix) . '%'
     ));
 }
+

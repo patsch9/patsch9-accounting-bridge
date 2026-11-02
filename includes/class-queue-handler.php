@@ -77,6 +77,9 @@ class PATSACBR_Queue_Handler {
         if (!$order_id || !in_array($action, self::allowed_actions(), true) || !wc_get_order($order_id)) {
             return false;
         }
+        if (in_array($action, array('create_invoice', 'update_invoice'), true) && !PATSACBR_Payment_Policy::allows(wc_get_order($order_id))) {
+            return false;
+        }
         $table = $wpdb->prefix . 'patsacbr_queue';
 
         // Compatibility guard for active rows created before dedupe_key existed.
@@ -354,6 +357,9 @@ class PATSACBR_Queue_Handler {
     }
 
     private function handle_create_invoice($order, $api_client) {
+        if (!PATSACBR_Payment_Policy::allows($order)) {
+            return PATSACBR_Payment_Policy::error();
+        }
         // A stale automatic queue item must never create a new invoice for an order
         // which has already reached a terminal state before processing starts.
         $existing = $order->get_meta('_patsacbr_lexware_invoice_id');
@@ -406,6 +412,10 @@ class PATSACBR_Queue_Handler {
     }
 
     private function handle_update_invoice($order, $api_client) {
+        // Check before crediting the old invoice: a replacement must be allowed.
+        if (!PATSACBR_Payment_Policy::allows($order)) {
+            return PATSACBR_Payment_Policy::error();
+        }
         // If a previous attempt already credited the old invoice but failed while
         // creating the replacement, continue with creation instead of crediting again.
         $pending_source = sanitize_text_field((string)$order->get_meta('_patsacbr_lexware_update_source_invoice_id'));
@@ -578,3 +588,4 @@ class PATSACBR_Queue_Handler {
         return $status;
     }
 }
+
