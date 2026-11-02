@@ -31,13 +31,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            git fetch origin main:refs/remotes/origin/main --no-tags
-            TAG_COMMIT="$(git rev-list -n1 "$GITHUB_REF_NAME")"
-            if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
-              echo "::error::Release tags must point to a commit contained in main."
-              exit 1
-            fi
+          git fetch origin main:refs/remotes/origin/main --no-tags
+          TAG_COMMIT="$(git rev-list -n1 "$GITHUB_REF_NAME")"
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
+            echo "::error::Release tags must point to a commit contained in main."
+            exit 1
           fi
 
           python3 <<'PY'
@@ -69,24 +67,17 @@ jobs:
               print(f'::error::Plugin header version ({header_version}) and PATSACBR_VERSION ({constant_version}) differ.')
               sys.exit(1)
 
-          event = os.environ['GITHUB_EVENT_NAME']
-          if event == 'push':
-              tag = os.environ['GITHUB_REF_NAME']
-              if not tag.startswith('v'):
-                  print('::error::Release tag must start with v.')
-                  sys.exit(1)
-              version = tag[1:]
-              if not version_pattern.fullmatch(version):
-                  print(f'::error::Tag {tag} does not match the project version scheme.')
-                  sys.exit(1)
-              if header_version != version:
-                  print(f'::error::Tag version ({version}) and plugin version ({header_version}) differ.')
-                  sys.exit(1)
-          else:
-              version = header_version
-              if not version_pattern.fullmatch(version):
-                  print(f'::error::Plugin version {version} does not match the project version scheme.')
-                  sys.exit(1)
+          tag = os.environ['GITHUB_REF_NAME']
+          if not tag.startswith('v'):
+              print('::error::Release tag must start with v.')
+              sys.exit(1)
+          version = tag[1:]
+          if not version_pattern.fullmatch(version):
+              print(f'::error::Tag {tag} does not match the project version scheme.')
+              sys.exit(1)
+          if header_version != version:
+              print(f'::error::Tag version ({version}) and plugin version ({header_version}) differ.')
+              sys.exit(1)
 
           prerelease = '-' in version
           if prerelease:
@@ -111,6 +102,7 @@ jobs:
         with:
           php-version: '8.4'
           coverage: none
+          tools: none
 
       - name: Build installable package
         shell: bash
