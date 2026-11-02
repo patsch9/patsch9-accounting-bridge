@@ -1,12 +1,10 @@
 name: Static checks
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency:
   group: checks-${{ github.event.pull_request.number || github.ref }}
@@ -22,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.2', '8.3', '8.4']
+        php: ['8.2', '8.5']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -82,8 +80,13 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      - name: Cache npm downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-wp-env-11.16.0
       - name: Install pinned WordPress test harness
-        run: npm -g --no-fund install @wordpress/env@11.16.0
+        run: npm -g --no-fund --prefer-offline install @wordpress/env@11.16.0
       - name: Configure disposable test environment
         run: |
           cat > .wp-env.json <<EOF
