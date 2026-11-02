@@ -29,7 +29,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: none
-          tools: wp-cli:2.12.0
+          tools: ${{ matrix.php == '8.2' && 'wp-cli:2.12.0' || 'none' }}
       - name: PHP syntax
         shell: bash
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
