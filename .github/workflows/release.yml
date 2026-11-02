@@ -126,6 +126,25 @@ jobs:
               raise SystemExit('Could not set Stable tag exactly once.')
           readme_path.write_text(readme, encoding='utf-8')
 
+          languages = root / 'languages'
+          if languages.is_dir():
+              catalog_pattern = re.compile(
+                  r'^("Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce )[^\\]+(\\n")$',
+                  re.MULTILINE,
+              )
+              for catalog in sorted(languages.glob('*.po*')):
+                  text = catalog.read_text(encoding='utf-8')
+                  if '"Project-Id-Version:' not in text:
+                      continue
+                  text, count = catalog_pattern.subn(
+                      lambda match: match.group(1) + version + match.group(2),
+                      text,
+                      count=1,
+                  )
+                  if count != 1:
+                      raise SystemExit(f'Could not set Project-Id-Version in {catalog.name}.')
+                  catalog.write_text(text, encoding='utf-8')
+
           final_plugin = plugin_path.read_text(encoding='utf-8')
           header = re.search(r'^\s*\*\s*Version:\s*([^\s]+)', final_plugin, re.MULTILINE).group(1)
           constant = re.search(r"define\(\s*'PATSACBR_VERSION'\s*,\s*'([^']+)'", final_plugin).group(1)
