@@ -28,3 +28,5 @@ Der Tag-Lauf `v2026.10.6` stoppte wegen vier `WordPress.Security.NonceVerificati
 Prüfpunkte: Einreihen von Erstellungs-/Aktualisierungsaufträgen, erneute Prüfung im Worker vor Kontaktabgleich und Belegerstellung, vor der Gutschrift eines zu ersetzenden Belegs sowie direkt am API-Erstellungseinstieg. Gutschriften vorhandener Rechnungen umgehen die Auswahl bewusst. Manuelle Aktionen geben einen eindeutigen Fehler zurück; Sammelaktionen zählen nur tatsächlich eingereihte Aufträge.
 
 `php tests/test-payment-policy.php`: 14 Assertions ohne externe API-Zugriffe, unter anderem Bestandskompatibilität, leere Auswahl, unbekannte Gateways, alte Queueaufträge, API-Direktaufruf und Gutschriften.
+
+Die deutsche MO-Datei wird mit `wp i18n make-mo` erzeugt. Die CI vergleicht den vollständigen Katalog einschließlich Headern mit einem frisch durch WP-CLI kompilierten Stand. Andere Compiler können die Metadatenreihenfolge ändern und dadurch trotz identischer Übersetzungstexte den Vergleich verletzen.
