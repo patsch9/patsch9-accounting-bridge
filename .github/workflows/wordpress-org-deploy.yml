@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing stable GitHub release tag to deploy (vYYYY.M.PATCH)
+        description: Existing stable GitHub release tag to deploy (YYYY.MM.N)
         required: true
         type: string
 
@@ -26,50 +26,64 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_repository.full_name == github.repository &&
-       startsWith(github.event.workflow_run.head_branch, 'v'))
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: Resolve stable release tag
+      - name: Checkout repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve release tag
         id: release
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
           MANUAL_TAG: ${{ inputs.tag }}
-          WORKFLOW_TAG: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
 
+          release_re='^[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*(-(alpha|beta)[1-9][0-9]*)?$'
+          stable_re='^[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*$'
+
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             tag="$MANUAL_TAG"
+            if [[ ! "$tag" =~ $stable_re ]]; then
+              echo "::error::Manual WordPress.org deploys accept only stable YYYY.MM.N tags."
+              exit 1
+            fi
           else
-            tag="$WORKFLOW_TAG"
+            mapfile -t release_tags < <(git tag --points-at "$WORKFLOW_SHA" | grep -E "$release_re" || true)
+            if [[ ${#release_tags[@]} -ne 1 ]]; then
+              echo "::error::Expected exactly one valid release tag on completed release SHA $WORKFLOW_SHA; found ${#release_tags[@]}."
+              exit 1
+            fi
+            tag="${release_tags[0]}"
           fi
 
-          if [[ ! "$tag" =~ ^v[0-9]{4}\.([1-9]|1[0-2])\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::Only stable CalVer release tags may be deployed to WordPress.org."
-            exit 1
+          stable=true
+          if [[ ! "$tag" =~ $stable_re ]]; then
+            stable=false
           fi
 
-          version="${tag#v}"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+          echo "stable=$stable" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout release tag
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ steps.release.outputs.tag }}
-          fetch-depth: 0
-          persist-credentials: false
+          if [[ "$stable" != "true" ]]; then
+            echo "Prerelease $tag detected; WordPress.org deploy is intentionally skipped."
+          fi
 
-      - name: Validate release provenance and metadata
+      - name: Validate release provenance
+        if: steps.release.outputs.stable == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
-          VERSION: ${{ steps.release.outputs.version }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -91,36 +105,8 @@ jobs:
             exit 1
           fi
 
-          python3 <<'PY'
-          import os
-          import re
-          import sys
-          from pathlib import Path
-
-          version = os.environ['VERSION']
-          plugin = Path('patsch9-accounting-bridge.php').read_text(encoding='utf-8')
-          readme = Path('readme.txt').read_text(encoding='utf-8')
-
-          def required(pattern, text, label):
-              match = re.search(pattern, text, re.MULTILINE)
-              if not match:
-                  print(f'::error::Could not read {label}.')
-                  sys.exit(1)
-              return match.group(1).strip()
-
-          header_version = required(r'^\s*\*\s*Version:\s*([^\s]+)', plugin, 'plugin header version')
-          constant_version = required(r"define\(\s*'PATSACBR_VERSION'\s*,\s*'([^']+)'\s*\)", plugin, 'PATSACBR_VERSION')
-          stable_tag = required(r'^Stable tag:\s*([^\s]+)\s*$', readme, 'readme Stable tag')
-
-          if len({version, header_version, constant_version, stable_tag}) != 1:
-              print(
-                  '::error::WordPress.org deployment metadata differs: '
-                  f'version={version}, header={header_version}, constant={constant_version}, stable_tag={stable_tag}'
-              )
-              sys.exit(1)
-          PY
-
       - name: Download and verify GitHub release package
+        if: steps.release.outputs.stable == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -151,7 +137,33 @@ jobs:
           test -f ".wporg-build/$SLUG/readme.txt"
           test -f ".wporg-build/$SLUG/LICENSE"
 
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ['VERSION']
+          slug = os.environ['SLUG']
+          root = Path('.wporg-build') / slug
+          plugin = (root / 'patsch9-accounting-bridge.php').read_text(encoding='utf-8')
+          readme = (root / 'readme.txt').read_text(encoding='utf-8')
+
+          header = re.search(r'^\s*\*\s*Version:\s*([^\s]+)', plugin, re.MULTILINE)
+          constant = re.search(r"define\(\s*'PATSACBR_VERSION'\s*,\s*'([^']+)'", plugin)
+          stable = re.search(r'^Stable tag:\s*([^\s]+)\s*$', readme, re.MULTILINE)
+          if not header or not constant or not stable:
+              raise SystemExit('Could not read version metadata from verified release package.')
+          values = {version, header.group(1), constant.group(1), stable.group(1)}
+          if len(values) != 1:
+              raise SystemExit(
+                  'WordPress.org package metadata differs: '
+                  f'version={version}, header={header.group(1)}, '
+                  f'constant={constant.group(1)}, stable_tag={stable.group(1)}'
+              )
+          PY
+
       - name: Load and validate current WordPress.org assets
+        if: steps.release.outputs.stable == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -194,6 +206,7 @@ jobs:
           PY
 
       - name: Deploy verified package to WordPress.org SVN
+        if: steps.release.outputs.stable == 'true'
         uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
         env:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}

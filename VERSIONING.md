@@ -1,143 +1,80 @@
-# Versionierung
+# Versionierung und Releases
 
-Beide Patsch9-WooCommerce-Plugins verwenden ab dem ersten stabilen öffentlichen Release dasselbe CalVer-Schema.
+Für neue Releases gilt der Git-Tag als einzige autoritative Release-Version. Versionsfelder im Quellstand müssen deshalb vor einem Release nicht mehr manuell auf die neue Nummer gesetzt werden.
 
 ## Schema
 
-`YYYY.M.PATCH`
+Erlaubt sind ausschließlich:
 
-- `YYYY`: Jahr des stabilen Releases.
-- `M`: Monat des stabilen Releases ohne führende Null.
-- `PATCH`: fortlaufende Release-Nummer innerhalb desselben Monats, beginnend bei `0`.
+- Stable/Hauptrelease: `YYYY.MM.N`, z. B. `2026.11.1`
+- Alpha: `YYYY.MM.N-alphaN`, z. B. `2026.11.2-alpha1`
+- Beta: `YYYY.MM.N-betaN`, z. B. `2026.11.2-beta1`
 
-Beispiel: `2026.10.0` ist das erste stabile Release im Oktober 2026. Ein weiteres stabiles Release im selben Monat wäre `2026.10.1`. Das erste stabile Release im November 2026 wäre `2026.11.0`.
+Regeln:
 
-## Vorabversionen
+- `YYYY` ist das vierstellige Jahr.
+- `MM` ist der zweistellige Monat von `01` bis `12`.
+- `N` ist die fortlaufende positive Release-Nummer und beginnt bei `1`.
+- Alpha-/Beta-Zähler sind ebenfalls positiv und beginnen bei `1`.
+- Neue Tags haben **kein** führendes `v`.
+- `rc`, `-alpha.1`, `-beta.1` und andere Suffixe werden nicht akzeptiert.
 
-Vorabversionen werden nur außerhalb des stabilen WordPress.org-Kanals verwendet:
+Historische Releases und Tags bleiben unverändert; die neue Tag-Regel gilt für neue Veröffentlichungen.
 
-- `2026.11.0-alpha.1`
-- `2026.11.0-beta.1`
-- `2026.11.0-rc.1`
+## Tag als Versionsquelle
 
-Auf WordPress.org wird als `Stable tag` ausschließlich eine stabile numerische Version ohne Suffix verwendet.
+`.github/workflows/release.yml` übernimmt die Release-Version direkt aus dem Tag. Der Workflow schreibt die Version ausschließlich in die temporäre Release-Arbeitskopie und verändert `main` nicht.
 
-## Release-Artefakte
-
-Für ein stabiles Release müssen diese Angaben übereinstimmen:
+Für jedes Release werden im gebauten Paket automatisch gesetzt:
 
 1. `Version` im Plugin-Header.
-2. öffentliche Versionskonstante des Plugins.
+2. `PATSACBR_VERSION`.
 3. `Stable tag` in `readme.txt`.
-4. Versionsnummer im aktuellen Eintrag von `CHANGELOG.md`.
-5. Git-Tag `vYYYY.M.PATCH`.
-6. Versionsnummer im ZIP-Dateinamen.
+4. Versionsnummer im ZIP-Dateinamen und in der SHA-256-Datei.
+5. Titel und Versionsnummer des GitHub Releases.
 
-## Automatisierte GitHub-Releases
+Auch bei Alpha- und Beta-Releases entspricht `Stable tag` innerhalb des **GitHub-Prerelease-Pakets** der Tag-Version. Das ist notwendig, damit das Paket intern konsistent bleibt und der strikte WordPress Plugin Check keinen Metadatenfehler meldet. Diese Pakete werden niemals zu WordPress.org übertragen und verändern dort daher keinen Stable-Kanal.
 
-### Dauerhaft benötigte Workflows
+Changelog-Inhalte bleiben redaktionelle Projektdokumentation und werden nicht als Versionsquelle für den Release-Build verwendet.
 
-| Workflow | Auslöser | Aufgabe |
-| --- | --- | --- |
-| `static-checks.yml` | PRs nach `main`, Pushes nach `main` | PHP 8.2/8.3/8.4, JavaScript, Übersetzungskataloge und strikter WordPress Plugin Check. |
-| `release.yml` | `v*`-Tags; alle PRs nach `main` | Installierbares ZIP prüfen; ausschließlich Tag-Läufe veröffentlichen ein GitHub Release. |
-| `wordpress-org-deploy.yml` | Erfolgreicher Release-Tag-Lauf; manuell mit expliziter Tag-Eingabe | Verifiziertes stabiles GitHub-Release nach WordPress.org übertragen. |
+## Release-Ablauf
 
-Dependabot bleibt für wöchentliche Updates der verwendeten Actions aktiv. Die
-Updates werden in einem gemeinsamen PR gebündelt; sämtliche vorgeschriebenen
-Prüfungen laufen weiterhin. Action-Versionen bleiben auf Commit-SHAs fixiert.
-
-Feature-Branches werden durch den PR geprüft. Dadurch laufen identische Prüfungen
-nicht zusätzlich für jeden Branch-Push. Tag-Pushes starten nur den Release-Bau;
-dieser prüft das tatsächlich ausgelieferte Paket. Dieselbe Paketprüfung läuft
-bereits für jeden PR nach `main`, einschließlich der Release-Metadaten. Beide
-Plugin-Check-Läufe verwenden `strict: true`, sodass Warnungen den Check stoppen.
-Neuere PR-Commits ersetzen noch
-laufende ältere Prüfungen. Veröffentlichungs- und Deploy-Läufe werden nicht
-automatisch wegen neuerer Commits abgebrochen.
-
-Die Job-Namen `syntax (8.2)`, `syntax (8.3)`, `syntax (8.4)` und
-`wordpress-plugin-check` bleiben unverändert, da die Repository-Regeln sie für
-`main` verlangen. Die PR-Prüfung hat deshalb keine Dateipfadfilter, die erforderliche
-Checks dauerhaft auf „Pending“ halten könnten.
-
-### Historische einmalige Workflows
-
-Stand der Prüfung: 2026-10-12. Folgende Dateien sind bereits aus `main` entfernt,
-werden aber von GitHub noch als historische Workflow-Einträge geführt:
-
-- `apply-historical-reconciliation.yml`
-- `apply-plugin-check-fixes.yml`
-- `build-reconciliation-test-package.yml`
-- `fix-reconciliation-race.yml`
-- `fix-release-db-warnings.yml`
-- `harden-reconciliation-restart.yml`
-- `prepare-reconciliation-control-version.yml`
-- `tune-historical-reconciliation.yml`
-- `wporg-review-fix.yml`
-
-Sie sind für Entwicklung, Release und Deployment nicht mehr erforderlich. Ihre
-Workflow-Dateien dürfen nicht für neue Änderungen reaktiviert werden. Künftige
-Codekorrekturen erfolgen über reguläre Branches und PRs.
-
-Der Zustand „active“ in GitHubs historischem Workflow-Verzeichnis beweist nicht,
-dass eine entsprechende Datei noch in `main` vorhanden ist. Eine zusätzliche
-Deaktivierung ist über GitHubs Workflow-Verwaltung möglich. Die Laufhistorie wird
-bei dieser Bereinigung erhalten; ihr Löschen ist ein eigener, nicht rückgängig
-zu machender Verwaltungsschritt.
-
-Referenzen:
-- https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
-- https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows
-
-### Ablauf
-
-GitHub Releases werden durch `.github/workflows/release.yml` automatisch aus Git-Tags erzeugt.
-
-1. Release-fertigen Code zuerst nach `main` mergen.
-2. Einen Tag wie `v2026.10.0` auf den gewünschten `main`-Commit setzen und pushen.
-3. Der Workflow prüft, dass der Tag auf `main` liegt und mit Plugin-Header sowie Versionskonstante übereinstimmt.
-4. Bei stabilen Releases werden zusätzlich `Stable tag` und der Changelog-Eintrag geprüft.
-5. Aus `.distignore` wird ein bereinigtes WordPress-Paket gebaut.
-6. PHP-/JavaScript-Syntax und WordPress Plugin Check laufen auf dem tatsächlichen Paketinhalt.
+1. Release-fertigen Code über einen geprüften Pull Request nach `main` mergen.
+2. Den gewünschten `main`-Commit taggen, z. B. `2026.11.1`, `2026.11.2-alpha1` oder `2026.11.2-beta1`.
+3. Der Release-Workflow validiert das Tag-Schema und prüft, dass der Tag-Commit in `main` enthalten ist.
+4. Aus `.distignore` wird eine saubere Release-Arbeitskopie erstellt.
+5. Die Action injiziert die Tag-Version in Plugin-Header, `PATSACBR_VERSION` und `Stable tag`.
+6. PHP-/JavaScript-Syntax und WordPress Plugin Check laufen auf genau diesem erzeugten Paket.
 7. Erst nach erfolgreichen Prüfungen werden ZIP und SHA-256-Prüfsumme als GitHub Release veröffentlicht.
+8. Alpha/Beta werden als GitHub Pre-release markiert und nicht als neuestes stabiles Release gesetzt.
 
-Tags mit `-alpha.N`, `-beta.N` oder `-rc.N` werden automatisch als GitHub-Pre-Release markiert. Bei Vorabversionen bleibt der WordPress.org-`Stable tag` auf der letzten stabilen Version.
+Ein fehlgeschlagener Release-Tag wird nicht nachträglich auf einen anderen Commit verschoben. Nach einer Codekorrektur wird eine neue Release-Version verwendet.
 
-### Fehlgeschlagene Release-Tags
+## WordPress.org
 
-Ein erneuter Lauf eines fehlgeschlagenen Tag-Workflows verwendet weiterhin den
-Code dieses Tags. Änderungen auf `main` reparieren diesen bestehenden Tag nicht.
-Bei notwendigen Codekorrekturen bleibt der vorhandene Tag unverändert; der
-korrigierte Stand erhält die nächste Patch-Version und einen neuen Tag.
+Nur Stable-Tags im Format `YYYY.MM.N` dürfen nach WordPress.org veröffentlicht werden.
 
-`v2026.10.6` wurde am 14.10.2026 durch Nonce-Warnungen im strengen Plugin Check
-blockiert. Die PR-Prüfung war zuvor nicht streng und prüfte das Release-Paket nur
-bei Änderungen an Release-Dateien. Die Korrektur wird als `2026.10.7` vorbereitet.
+Der Workflow `.github/workflows/wordpress-org-deploy.yml` startet nach einem erfolgreichen Stable-Release automatisch oder kann für ein bestehendes Stable-Release manuell gestartet werden. Alpha- und Beta-Releases werden nicht deployt.
 
-## WordPress.org-Veröffentlichung
+Vor dem SVN-Deploy wird geprüft:
 
-WordPress.org wird ausschließlich als Release-Ziel verwendet. Der Quellcode und die Entwicklung bleiben in GitHub; in das WordPress.org-SVN werden nur fertig geprüfte stabile Releases übernommen.
+1. Der Tag entspricht exakt `YYYY.MM.N` ohne Suffix.
+2. Der Tag-Commit ist in `main` enthalten.
+3. Das GitHub Release ist veröffentlicht, kein Draft und kein Pre-release.
+4. ZIP und SHA-256-Datei werden direkt aus dem GitHub Release geladen und die Prüfsumme wird verifiziert.
+5. **Die Versionsmetadaten werden im verifizierten Release-ZIP geprüft**, nicht im Git-Quellstand: Tag, Plugin-Header, `PATSACBR_VERSION` und `Stable tag` müssen identisch sein.
+6. Genau dieses verifizierte Paket wird nach WordPress.org übertragen.
 
-Der Workflow `.github/workflows/wordpress-org-deploy.yml` akzeptiert ausschließlich stabile CalVer-Tags und prüft vor dem SVN-Commit:
-
-1. Der Tag entspricht `vYYYY.M.PATCH` und enthält keinen Pre-Release-Suffix.
-2. Der Tag zeigt auf einen Commit, der in `main` enthalten ist.
-3. Zu dem Tag existiert ein veröffentlichtes GitHub Release, das weder Draft noch Pre-Release ist.
-4. Git-Tag, Plugin-Header, `PATSACBR_VERSION` und `Stable tag` stimmen überein.
-5. Das bereits vom Release-Workflow erzeugte ZIP und seine SHA-256-Prüfsumme werden von GitHub Releases geladen und verifiziert.
-6. Genau der Inhalt dieses geprüften ZIPs wird als SVN-`trunk` und als Versions-Tag nach WordPress.org übertragen.
-
-Für den SVN-Zugriff müssen in GitHub unter `Settings → Secrets and variables → Actions` die Repository-Secrets `SVN_USERNAME` und `SVN_PASSWORD` hinterlegt sein. `SVN_USERNAME` ist der WordPress.org-Benutzername; `SVN_PASSWORD` ist das separate WordPress.org-SVN-Passwort.
-
-Nach einem erfolgreichen zukünftigen stabilen GitHub-Release wird der WordPress.org-Deploy automatisch angestoßen. Bereits vorhandene Releases können über `Actions → Deploy to WordPress.org → Run workflow` mit ihrem bestehenden Tag manuell veröffentlicht werden.
-
-WordPress.org-spezifische Bilder wie Icons, Banner und Screenshots gehören im GitHub-Repository nach `.wordpress-org/`. Dieser Ordner wird nicht in das installierbare Plugin-ZIP aufgenommen, sondern vom Deploy-Workflow in das SVN-`assets/`-Verzeichnis übertragen.
+Damit kann ein Quellstand auf `main` weiterhin die zuletzt verwendete Entwicklungs-/Stable-Version enthalten; die tatsächlich veröffentlichte Version entsteht reproduzierbar aus dem Release-Tag.
 
 ## Interne Schema-Versionen
 
-Datenbank- oder Speicherschema-Versionen sind ausdrücklich von der öffentlichen Plugin-Version getrennt. Sie werden nur erhöht, wenn sich das persistierte Schema tatsächlich ändert. Eine reine Code-, Dokumentations- oder Sicherheitskorrektur erhöht daher nicht automatisch die interne Datenbankversion.
+Datenbank- oder Speicherschema-Versionen sind von der öffentlichen Plugin-Version getrennt. Sie werden nur erhöht, wenn sich das persistierte Schema tatsächlich ändert.
 
-## Frühere Entwicklungsstände
+## Sicherheit
 
-Alle Versionsnummern vor `2026.10.0` gehören zur internen Vorabphase. Sie bleiben aus Gründen der Nachvollziehbarkeit in Git-Historie, Migrationen und technischen Kommentaren erhalten, sind aber nicht Teil des neuen öffentlichen Release-Schemas.
+- Actions bleiben auf Commit-SHAs gepinnt.
+- Release-Tags müssen auf `main` zeigen.
+- Das veröffentlichte Paket wird vor Veröffentlichung geprüft.
+- WordPress.org erhält nur verifizierte Stable-Pakete.
+- Vorabversionen können den WordPress.org-Stable-Kanal nicht auslösen.
