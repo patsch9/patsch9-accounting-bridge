@@ -1,0 +1,67 @@
+name: Verified artifact cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cleanup-artifacts.yml'
+      - '.github/scripts/*cleanup_release_artifacts.py'
+  pull_request:
+    paths:
+      - '.github/workflows/cleanup-artifacts.yml'
+      - '.github/scripts/*cleanup_release_artifacts.py'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      run_id:
+        type: string
+        required: false
+        default: ''
+      release_tag:
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: artifact-cleanup-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test deletion safeguards offline
+        run: python3 .github/scripts/test_cleanup_release_artifacts.py
+
+  cleanup:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Delete only artifacts fully preserved in published releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLEANUP_RUN_ID: ${{ inputs.run_id }}
+          CLEANUP_RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ -n "$CLEANUP_RUN_ID" || -n "$CLEANUP_RELEASE_TAG" ]]; then
+            args=(--run-id "$CLEANUP_RUN_ID" --release-tag "$CLEANUP_RELEASE_TAG")
+          fi
+          python3 .github/scripts/cleanup_release_artifacts.py "${args[@]}"

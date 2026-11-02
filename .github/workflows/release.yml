@@ -178,7 +178,7 @@ jobs:
             patsch9-accounting-bridge-${{ steps.version.outputs.version }}.zip
             patsch9-accounting-bridge-${{ steps.version.outputs.version }}.zip.sha256
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
   publish:
     needs: build
@@ -216,3 +216,14 @@ jobs:
             args+=(--prerelease --latest=false)
           fi
           gh "${args[@]}"
+
+  cleanup:
+    name: Published build artifacts entfernen
+    needs: publish
+    uses: ./.github/workflows/cleanup-artifacts.yml # zizmor: ignore[self-repository] -- Same-commit reusable workflow.
+    with:
+      run_id: ${{ github.run_id }}
+      release_tag: ${{ github.ref_name }}
+    permissions:
+      contents: read
+      actions: write
