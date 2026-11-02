@@ -63,7 +63,6 @@ jobs:
         shell: bash
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          PRERELEASE: ${{ steps.version.outputs.prerelease }}
           SLUG: patsch9-accounting-bridge
         run: |
           set -euo pipefail
@@ -94,7 +93,6 @@ jobs:
 
           root = Path('.release-build') / os.environ['SLUG']
           version = os.environ['VERSION']
-          prerelease = os.environ['PRERELEASE'] == 'true'
           plugin_path = root / 'patsch9-accounting-bridge.php'
           readme_path = root / 'readme.txt'
 
@@ -117,39 +115,23 @@ jobs:
           plugin_path.write_text(plugin, encoding='utf-8')
 
           readme = readme_path.read_text(encoding='utf-8')
-          stable_match = re.search(r'^Stable tag:\s*([^\s]+)\s*$', readme, re.MULTILINE)
-          if not stable_match:
-              raise SystemExit('Could not read Stable tag from readme.txt.')
-
-          if prerelease:
-              stable = stable_match.group(1)
-              if not re.fullmatch(r'[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*', stable):
-                  raise SystemExit('Prerelease requires a valid previous stable tag in readme.txt.')
-              stable_tuple = tuple(map(int, stable.split('.')))
-              base_tuple = tuple(map(int, version.split('-', 1)[0].split('.')))
-              if stable_tuple >= base_tuple:
-                  raise SystemExit('Prerelease Stable tag must refer to an earlier stable release.')
-          else:
-              readme, stable_count = re.subn(
-                  r'(^Stable tag:\s*)[^\s]+',
-                  lambda match: match.group(1) + version,
-                  readme,
-                  count=1,
-                  flags=re.MULTILINE,
-              )
-              if stable_count != 1:
-                  raise SystemExit('Could not set Stable tag exactly once.')
-              readme_path.write_text(readme, encoding='utf-8')
+          readme, stable_count = re.subn(
+              r'(^Stable tag:\s*)[^\s]+',
+              lambda match: match.group(1) + version,
+              readme,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          if stable_count != 1:
+              raise SystemExit('Could not set Stable tag exactly once.')
+          readme_path.write_text(readme, encoding='utf-8')
 
           final_plugin = plugin_path.read_text(encoding='utf-8')
           header = re.search(r'^\s*\*\s*Version:\s*([^\s]+)', final_plugin, re.MULTILINE).group(1)
           constant = re.search(r"define\(\s*'PATSACBR_VERSION'\s*,\s*'([^']+)'", final_plugin).group(1)
-          if header != version or constant != version:
-              raise SystemExit('Generated package does not contain the tag-derived plugin version.')
-          if not prerelease:
-              stable = re.search(r'^Stable tag:\s*([^\s]+)', readme_path.read_text(encoding='utf-8'), re.MULTILINE).group(1)
-              if stable != version:
-                  raise SystemExit('Generated stable package does not contain the tag-derived Stable tag.')
+          stable = re.search(r'^Stable tag:\s*([^\s]+)', readme_path.read_text(encoding='utf-8'), re.MULTILINE).group(1)
+          if len({version, header, constant, stable}) != 1:
+              raise SystemExit('Generated package does not contain consistent tag-derived version metadata.')
           PY
 
           find ".release-build/$SLUG" -type f -name '*.php' -print0 | xargs -0 -r -n1 php -l
