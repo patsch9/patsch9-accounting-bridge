@@ -92,7 +92,7 @@ jobs:
           cat > .wp-env.json <<EOF
           {"core": null, "testsEnvironment": false, "mappings": {"wp-content/plugins/patsch9-accounting-bridge": "$PWD"}}
           EOF
-          wp-env start --update
+          wp-env start
           wp-env run cli wp plugin install woocommerce --activate
           wp-env run cli wp plugin activate patsch9-accounting-bridge
       - name: Migration and order locks against a real database
