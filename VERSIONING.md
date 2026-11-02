@@ -29,12 +29,11 @@ Für jedes Release werden im gebauten Paket automatisch gesetzt:
 
 1. `Version` im Plugin-Header.
 2. `PATSACBR_VERSION`.
-3. Versionsnummer im ZIP-Dateinamen und in der SHA-256-Datei.
-4. Titel und Versionsnummer des GitHub Releases.
+3. `Stable tag` in `readme.txt`.
+4. Versionsnummer im ZIP-Dateinamen und in der SHA-256-Datei.
+5. Titel und Versionsnummer des GitHub Releases.
 
-Bei einem Stable-Release wird zusätzlich `Stable tag` in `readme.txt` auf exakt dieselbe Version gesetzt.
-
-Bei Alpha- und Beta-Releases bleibt `Stable tag` auf dem letzten stabilen Release. Das ist beabsichtigt, weil Vorabversionen nicht nach WordPress.org veröffentlicht werden.
+Auch bei Alpha- und Beta-Releases entspricht `Stable tag` innerhalb des **GitHub-Prerelease-Pakets** der Tag-Version. Das ist notwendig, damit das Paket intern konsistent bleibt und der strikte WordPress Plugin Check keinen Metadatenfehler meldet. Diese Pakete werden niemals zu WordPress.org übertragen und verändern dort daher keinen Stable-Kanal.
 
 Changelog-Inhalte bleiben redaktionelle Projektdokumentation und werden nicht als Versionsquelle für den Release-Build verwendet.
 
@@ -44,9 +43,9 @@ Changelog-Inhalte bleiben redaktionelle Projektdokumentation und werden nicht al
 2. Den gewünschten `main`-Commit taggen, z. B. `2026.11.1`, `2026.11.2-alpha1` oder `2026.11.2-beta1`.
 3. Der Release-Workflow validiert das Tag-Schema und prüft, dass der Tag-Commit in `main` enthalten ist.
 4. Aus `.distignore` wird eine saubere Release-Arbeitskopie erstellt.
-5. Die Action injiziert die Tag-Version in Plugin-Header und `PATSACBR_VERSION`; bei Stable-Releases zusätzlich in `Stable tag`.
+5. Die Action injiziert die Tag-Version in Plugin-Header, `PATSACBR_VERSION` und `Stable tag`.
 6. PHP-/JavaScript-Syntax und WordPress Plugin Check laufen auf genau diesem erzeugten Paket.
-7. Erst nach erfolgreicher Prüfung werden ZIP und SHA-256-Prüfsumme als GitHub Release veröffentlicht.
+7. Erst nach erfolgreichen Prüfungen werden ZIP und SHA-256-Prüfsumme als GitHub Release veröffentlicht.
 8. Alpha/Beta werden als GitHub Pre-release markiert und nicht als neuestes stabiles Release gesetzt.
 
 Ein fehlgeschlagener Release-Tag wird nicht nachträglich auf einen anderen Commit verschoben. Nach einer Codekorrektur wird eine neue Release-Version verwendet.
