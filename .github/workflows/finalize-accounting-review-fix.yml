@@ -1,0 +1,167 @@
+name: Finalize accounting review fix
+
+on:
+  push:
+    branches:
+      - fix/accounting-review-2026-11
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Apply final corrections and regression coverage
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if text.count(old) != 1:
+                  raise SystemExit(f'{path}: expected one match, got {text.count(old)}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          path = 'includes/class-woo-lexware-integration.php'
+          old = """        // Legacy storage/sync mode can fire both registered save hooks in one
+          // request. Process each order only once to avoid duplicate notes/writes.
+          static $processed_orders = array();
+          if (isset($processed_orders[$order_id])) {
+              return;
+          }
+          $processed_orders[$order_id] = true;
+
+          // Read request data in the same scope as nonce verification. The locked
+          // callback receives only sanitized values, never the mutable request.
+          $manual_invoice_id = isset($_POST['patsacbr_manual_invoice_id']) && is_string($_POST['patsacbr_manual_invoice_id']) ?
+              sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_id'])) : '';
+          $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) && is_string($_POST['patsacbr_manual_invoice_number']) ?
+              sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
+
+          PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id, $manual_invoice_id, $manual_invoice_number) {
+          """
+          new = """        // Read request data in the same scope as nonce verification. The locked
+          // callback receives only sanitized values, never the mutable request.
+          $manual_invoice_id = isset($_POST['patsacbr_manual_invoice_id']) && is_string($_POST['patsacbr_manual_invoice_id']) ?
+              sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_id'])) : '';
+          $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) && is_string($_POST['patsacbr_manual_invoice_number']) ?
+              sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
+
+          // Legacy storage/sync mode can fire both registered save hooks in one
+          // request. De-duplicate only an identical payload that was actually
+          // processed. A busy order lock or a changed payload must remain retryable.
+          static $processed_requests = array();
+          $request_fingerprint = hash('sha256', $manual_invoice_id . "\\0" . $manual_invoice_number);
+          if (isset($processed_requests[$order_id][$request_fingerprint])) {
+              return;
+          }
+
+          $save_result = PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id, $manual_invoice_id, $manual_invoice_number) {
+          """
+          replace_once(path, old, new)
+
+          old = """            }
+          });
+      }
+
+      public function render_order_metabox($post_or_order) {
+          """
+          new = """            }
+          });
+
+          if (!is_wp_error($save_result)) {
+              if (!isset($processed_requests[$order_id])) {
+                  $processed_requests[$order_id] = array();
+              }
+              $processed_requests[$order_id][$request_fingerprint] = true;
+          }
+      }
+
+      public function render_order_metabox($post_or_order) {
+          """
+          replace_once(path, old, new)
+
+          # Remove obsolete request-local limiter state now that API slots are shared.
+          replace_once(
+              'includes/class-lexware-api-client.php',
+              "    private $request_times = array(); // Für Tracking der Requests im Zeitfenster\n",
+              "",
+          )
+
+          # Clear the ephemeral shared slot on deactivation and destructive uninstall.
+          replace_once(
+              'includes/class-queue-handler.php',
+              "        wp_clear_scheduled_hook('patsacbr_process_queue');\n    }\n\n    private static function allowed_actions()",
+              "        wp_clear_scheduled_hook('patsacbr_process_queue');\n        delete_option('patsacbr_lexware_next_request_at');\n    }\n\n    private static function allowed_actions()",
+          )
+          replace_once(
+              'uninstall.php',
+              "    'patsacbr_retry_attempts',\n",
+              "    'patsacbr_retry_attempts',\n    'patsacbr_lexware_next_request_at',\n",
+          )
+          replace_once(
+              'uninstall.php',
+              "    '_transient_timeout_patsacbr_rate_limit_',\n",
+              "    '_transient_timeout_patsacbr_rate_limit_',\n    '_transient_patsacbr_error_mail_',\n    '_transient_timeout_patsacbr_error_mail_',\n",
+          )
+
+          # Regression: identical invalid payload from two save hooks must create only one note.
+          replace_once(
+              'tests/test-upgrade-locks.php',
+              """    $_POST = $form();
+      $_POST['patsacbr_manual_invoice_id'] = 'not-a-uuid';
+      $integration->save_manual_invoice_data($manual_order_id);
+      $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Malformed UUID prevents manual link');
+      $_POST = $form();
+          """,
+              """    $_POST = $form();
+      $_POST['patsacbr_manual_invoice_id'] = 'not-a-uuid';
+      $notes_before_duplicate_save = count(wc_get_order_notes(['order_id' => $manual_order_id]));
+      $integration->save_manual_invoice_data($manual_order_id);
+      $integration->save_manual_invoice_data($manual_order_id);
+      $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Malformed UUID prevents manual link');
+      $check(
+          ($notes_before_duplicate_save + 1) === count(wc_get_order_notes(['order_id' => $manual_order_id])),
+          'Duplicate order-save hooks add only one invalid-link note'
+      );
+      $_POST = $form();
+          """,
+          )
+          PY
+
+      - name: Validate changed code
+        shell: bash
+        run: |
+          php -l includes/class-woo-lexware-integration.php
+          php -l includes/class-lexware-api-client.php
+          php -l includes/class-queue-handler.php
+          php -l uninstall.php
+          php -l tests/test-upgrade-locks.php
+          php tests/test-rental-meta.php
+          php tests/test-payment-policy.php
+          git diff --check
+
+      - name: Commit final corrections
+        shell: bash
+        run: |
+          rm -f .github/workflows/finalize-accounting-review-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: make manual save dedupe retry-safe"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
