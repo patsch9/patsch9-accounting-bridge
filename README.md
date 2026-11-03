@@ -127,10 +127,12 @@ WooCommerce® ist eine Marke von Automattic Inc. Lexware® und Lexware Office si
 GPL-2.0-or-later. Siehe [LICENSE](LICENSE).
 
 
-## Belegerstellung nach Zahlungsart (2026.11.1-beta1)
+## Belegerstellung nach Zahlungsart (2026.11.1)
 
 Unter **WooCommerce → Accounting Bridge → API-Konfiguration** lässt sich die Belegerstellung auf bestimmte Zahlungsarten begrenzen. „Alle Zahlungsarten“ erhält das bisherige Verhalten und schließt später installierte Zahlungsarten ein. „Nur ausgewählte Zahlungsarten“ erstellt ausschließlich für die angekreuzten Gateway-IDs neue Rechnungen; eine leere Auswahl erlaubt keine. Die vorhandene Auswahl der auslösenden Bestellstatus gilt zusätzlich.
 
 Die Auswahl gilt für automatische, manuelle und Sammelaktionen sowie bereits wartende Aufträge. Auch vor einer Rechnungsaktualisierung wird geprüft, bevor ein alter Beleg gutgeschrieben werden könnte. Vorhandene Belege und deren Gutschriften bleiben erhalten bzw. bedienbar. Ausgeschlossene Warteschlangenaufträge enden ohne Wiederholung mit einem verständlichen Fehler. Nach einer späteren Freigabe kann die Erstellung manuell erneut gestartet werden.
 
 Für Orderdate heißt die Gateway-ID `p9od_pay_on_pickup`. Diese Zahlungsart kann beispielsweise ausgeschlossen werden, wenn der Beleg stattdessen vor Ort über die Kasse erstellt wird. Neue Abholstatus lassen sich bei Bedarf als Auslöser auswählen.
+
+Für 2026.11.1 wurden außerdem API-Logging und Kundendownloads weiter gehärtet, Lexware-Rate-Limits prozessübergreifend koordiniert, wiederholte Fehler-E-Mails begrenzt und Queue-/Retry-/WP-Cron-Pfade korrigiert. Manuelle Lexware-Aktionen verwenden einheitliche WooCommerce-Berechtigungen, und doppelte Verarbeitung durch gleichzeitig ausgelöste Legacy-/Sync-Hooks wird verhindert.
