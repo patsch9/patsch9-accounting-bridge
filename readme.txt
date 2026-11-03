@@ -99,10 +99,12 @@ English is the source language. A complete German (de_DE) translation is bundled
 
 == Changelog ==
 
-= 2026.11.1-beta1 =
-* Belegerstellung auf ausgewählte Zahlungsarten begrenzen.
-* Prüfungen für manuelle, automatische und wartende Erstellungen sowie Rechnungsersetzungen.
-* Vorhandene Belege und Gutschriften bleiben unabhängig von der Auswahl nutzbar.
+= 2026.11.1 =
+* Allow invoice creation to be limited to selected WooCommerce payment methods across automatic, manual, queued and replacement flows.
+* Harden Lexware API logging, customer invoice downloads, process-wide API rate limiting and repeated administrator error emails.
+* Correct queue retry semantics and the WP-Cron fallback, and prevent duplicate processing when legacy and synchronization hooks fire in the same request.
+* Use consistent WooCommerce capabilities for manual Lexware actions and move historical reconciliation out of normal frontend requests.
+* Preserve WooCommerce order-date formatting and support multiline payment-method-specific payment terms.
 
 = 2026.10.8 =
 * Preserve historical WooCommerce tax percentages when live tax rules were deleted or changed, with a safe amount-based fallback including negative taxable fees.
@@ -148,6 +150,9 @@ English is the source language. A complete German (de_DE) translation is bundled
 * Accounting mappings and queue data are preserved on uninstall by default; destructive cleanup requires explicit opt-in.
 
 == Upgrade Notice ==
+
+= 2026.11.1 =
+Invoice creation can now be restricted by payment method. Existing installations keep the previous all-payment-methods behavior unless the new restriction mode is selected.
 
 = 2026.10.0 =
 First stable release of the new public version line. Back up existing prerelease installations and verify the connection with a test document after upgrading.
