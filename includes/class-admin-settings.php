@@ -73,6 +73,12 @@ class PATSACBR_Admin_Settings {
     }
 
     public function register_settings() {
+        register_setting('patsacbr_api_settings', 'patsacbr_payment_scope', array(
+            'type' => 'string', 'sanitize_callback' => array('PATSACBR_Payment_Policy', 'sanitize_scope')
+        ));
+        register_setting('patsacbr_api_settings', 'patsacbr_payment_methods', array(
+            'type' => 'array', 'sanitize_callback' => array('PATSACBR_Payment_Policy', 'sanitize_methods')
+        ));
         register_setting('patsacbr_api_settings', 'patsacbr_api_key', array(
             'type' => 'string',
             'default' => '',
@@ -338,6 +344,32 @@ class PATSACBR_Admin_Settings {
                         <?php
                     }
                     ?>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">
+                    <label for="patsacbr_payment_scope"><?php esc_html_e('Create invoices for payment methods', 'patsch9-accounting-bridge'); ?></label>
+                </th>
+                <td>
+                    <select name="patsacbr_payment_scope" id="patsacbr_payment_scope">
+                        <option value="all" <?php selected(get_option('patsacbr_payment_scope', 'all'), 'all'); ?>><?php esc_html_e('All payment methods', 'patsch9-accounting-bridge'); ?></option>
+                        <option value="selected" <?php selected(get_option('patsacbr_payment_scope', 'all'), 'selected'); ?>><?php esc_html_e('Selected payment methods only', 'patsch9-accounting-bridge'); ?></option>
+                    </select>
+                    <input type="hidden" name="patsacbr_payment_methods[]" value="">
+                    <?php
+                    $methods = (array) get_option('patsacbr_payment_methods', array());
+                    $gateways = WC()->payment_gateways()->payment_gateways();
+                    $labels = array();
+                    foreach ($gateways as $id => $gateway) {
+                        $labels[$id] = $gateway->get_title() ?: $gateway->get_method_title();
+                    }
+                    foreach ($methods as $id) {
+                        if (is_string($id) && !isset($labels[$id])) { $labels[$id] = $id; }
+                    }
+                    foreach ($labels as $id => $label): ?>
+                        <label style="display:block;margin:5px 0"><input type="checkbox" name="patsacbr_payment_methods[]" value="<?php echo esc_attr($id); ?>" <?php checked(in_array($id, $methods, true)); ?>> <?php echo esc_html($label); ?> <code><?php echo esc_html($id); ?></code></label>
+                    <?php endforeach; ?>
+                    <p class="description"><?php esc_html_e('Applies to automatic and manual invoice creation, including queued jobs. No selection means no new invoices. Credit notes for existing invoices remain available.', 'patsch9-accounting-bridge'); ?></p>
                 </td>
             </tr>
             <tr>
@@ -752,3 +784,4 @@ class PATSACBR_Admin_Settings {
         <?php
     }
 }
+

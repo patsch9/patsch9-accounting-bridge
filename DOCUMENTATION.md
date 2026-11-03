@@ -19,3 +19,14 @@
 Der Tag-Lauf `v2026.10.6` stoppte wegen vier `WordPress.Security.NonceVerification.Missing`-Warnungen: Die Nonce-Prüfung lag außerhalb des Sperr-Callbacks, während dieser auf `$_POST` zugriff. Ab 2026.10.7 werden die Felder nach Prüfung im äußeren Scope gelesen und bereinigt. Bestellsperre und erneutes Laden der Bestelldaten bleiben erhalten. PRs nach `main` prüfen nun Quellcode und gebautes Release-Paket mit `strict: true`.
 
 `tests/test-upgrade-locks.php` prüft zusätzlich fehlende, falsche und fremde Bestell-Nonces, fehlende Berechtigungen, Array-Eingaben, gültige und ungültige Verknüpfungen, Sperrkonflikte sowie den Erhalt bestehender Rechnungsdaten.
+
+
+## Zahlungsarten-Auswahl
+
+`PATSACBR_Payment_Policy` prüft die Optionen `patsacbr_payment_scope` (`all`/`selected`) und `patsacbr_payment_methods` (Gateway-IDs). Fehlen die Optionen, bleiben alle Zahlungsarten erlaubt. Die Settings API bereinigt beide Werte; Optionen werden bei vollständiger Deinstallation mit entfernt.
+
+Prüfpunkte: Einreihen von Erstellungs-/Aktualisierungsaufträgen, erneute Prüfung im Worker vor Kontaktabgleich und Belegerstellung, vor der Gutschrift eines zu ersetzenden Belegs sowie direkt am API-Erstellungseinstieg. Gutschriften vorhandener Rechnungen umgehen die Auswahl bewusst. Manuelle Aktionen geben einen eindeutigen Fehler zurück; Sammelaktionen zählen nur tatsächlich eingereihte Aufträge.
+
+`php tests/test-payment-policy.php`: 14 Assertions ohne externe API-Zugriffe, unter anderem Bestandskompatibilität, leere Auswahl, unbekannte Gateways, alte Queueaufträge, API-Direktaufruf und Gutschriften.
+
+Die deutsche MO-Datei wird mit `wp i18n make-mo` erzeugt. Die CI vergleicht den vollständigen Katalog einschließlich Headern mit einem frisch durch WP-CLI kompilierten Stand. Andere Compiler können die Metadatenreihenfolge ändern und dadurch trotz identischer Übersetzungstexte den Vergleich verletzen.

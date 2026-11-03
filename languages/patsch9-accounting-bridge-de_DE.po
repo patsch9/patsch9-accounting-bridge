@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.10.5\n"
+"Project-Id-Version: Patsch9 Accounting Bridge for WooCommerce 2026.11.1-beta1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/patsch9-accounting-bridge\n"
 "Last-Translator: Patsch9 contributors\n"
 "Language-Team: German\n"
@@ -1236,3 +1236,24 @@ msgstr "Bestellung #%s"
 #: patsch9-accounting-bridge.php:185
 msgid "Accounting Bridge is paused because its data migration could not complete. Legacy data has been preserved. Resolve conflicting settings or queue tables and database errors, then reload this page to retry."
 msgstr "Accounting Bridge ist pausiert, weil die Datenmigration nicht abgeschlossen werden konnte. Alte Daten bleiben erhalten. Beheben Sie widersprüchliche Einstellungen oder Queue-Tabellen und Datenbankfehler und laden Sie die Seite für einen erneuten Versuch neu."
+
+msgid "Invoice creation is disabled for this payment method."
+msgstr "Für diese Zahlungsart ist die Belegerstellung deaktiviert."
+
+msgid "Create invoices for payment methods"
+msgstr "Belege für Zahlungsarten erstellen"
+
+msgid "All payment methods"
+msgstr "Alle Zahlungsarten"
+
+msgid "Selected payment methods only"
+msgstr "Nur ausgewählte Zahlungsarten"
+
+msgid ""
+"Applies to automatic and manual invoice creation, including queued jobs. No "
+"selection means no new invoices. Credit notes for existing invoices remain "
+"available."
+msgstr ""
+"Gilt für automatische und manuelle Belegerstellung sowie wartende Aufträge. "
+"Ohne Auswahl werden keine neuen Rechnungen erstellt. Gutschriften zu "
+"vorhandenen Rechnungen bleiben möglich."

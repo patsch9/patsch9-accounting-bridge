@@ -2,6 +2,13 @@
 
 Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
 
+## 2026.11.1-beta1 – Noch nicht veröffentlicht
+
+- Belegerstellung nach Zahlungsart auswählbar; bestehende Installationen behalten „Alle Zahlungsarten“.
+- Auswahl greift für automatische, manuelle und Sammelaktionen sowie bei der Verarbeitung bereits wartender Aufträge.
+- Rechnungsersetzung wird vor der Gutschrift gestoppt, wenn die Zahlungsart ausgeschlossen ist. Gutschriften vorhandener Rechnungen bleiben möglich.
+- Deutsche Übersetzungen, Deinstallationsbereinigung und 14 fokussierte Regressionstests ergänzt.
+
 ## 2026.10.8 – Noch nicht veröffentlicht
 
 - Historische Umsatzsteuersätze werden zuerst aus den Steuerpositionen der Bestellung gelesen; gelöschte aktuelle WooCommerce-Steuerregeln können dadurch keine besteuerten Positionen mehr fälschlich auf 0 % setzen.
@@ -91,3 +98,4 @@ Erstes stabiles öffentliches Release.
 ## Interne Vorabphase
 
 Die Entwicklungsstände bis einschließlich `1.3.6` waren interne Vorabversionen. Ihre Funktionen und Korrekturen sind in `2026.10.0` konsolidiert. Ab `2026.10.0` gilt ausschließlich das neue öffentliche Versionsschema.
+

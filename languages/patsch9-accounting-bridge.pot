@@ -1228,3 +1228,21 @@ msgstr ""
 #, php-format
 msgid "Order #%s"
 msgstr ""
+
+msgid "Invoice creation is disabled for this payment method."
+msgstr ""
+
+msgid "Create invoices for payment methods"
+msgstr ""
+
+msgid "All payment methods"
+msgstr ""
+
+msgid "Selected payment methods only"
+msgstr ""
+
+msgid ""
+"Applies to automatic and manual invoice creation, including queued jobs. No "
+"selection means no new invoices. Credit notes for existing invoices remain "
+"available."
+msgstr ""

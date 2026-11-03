@@ -35,6 +35,8 @@ jobs:
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Rental metadata export regressions
         run: php tests/test-rental-meta.php
+      - name: Payment selection boundaries
+        run: php tests/test-payment-policy.php
       - name: JavaScript syntax
         if: matrix.php == '8.2'
         shell: bash
@@ -97,3 +99,4 @@ jobs:
           wp-env run cli wp plugin activate patsch9-accounting-bridge
       - name: Migration and order locks against a real database
         run: wp-env run cli env PATSACBR_RUN_UPGRADE_TESTS=1 wp eval-file wp-content/plugins/patsch9-accounting-bridge/tests/test-upgrade-locks.php
+

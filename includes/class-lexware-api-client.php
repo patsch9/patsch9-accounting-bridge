@@ -348,6 +348,9 @@ class PATSACBR_API_Client {
         if (!$order instanceof WC_Order) {
             return new WP_Error('invalid_order', __('Invalid order', 'patsch9-accounting-bridge'));
         }
+        if (!PATSACBR_Payment_Policy::allows($order)) {
+            return PATSACBR_Payment_Policy::error();
+        }
         if ('EUR' !== strtoupper((string) $order->get_currency())) {
             return new WP_Error('unsupported_currency', __('Lexware currently supports only EUR invoices through this interface.', 'patsch9-accounting-bridge'));
         }
@@ -1474,3 +1477,4 @@ Time: %3$s', 'patsch9-accounting-bridge'),
         }
     }
 }
+
