@@ -1,0 +1,48 @@
+name: Apply accounting review fixes
+
+on:
+  push:
+    branches:
+      - fix/accounting-review-2026-11
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Apply targeted fixes
+        run: python3 .github/scripts/apply_accounting_review_fixes.py
+
+      - name: Validate syntax and regression scripts
+        shell: bash
+        run: |
+          find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          php tests/test-rental-meta.php
+          php tests/test-payment-policy.php
+          python3 -m py_compile .github/scripts/cleanup_release_artifacts.py
+          git diff --check
+
+      - name: Commit corrected sources
+        shell: bash
+        run: |
+          rm -f .github/workflows/apply-accounting-review-fixes.yml
+          rm -f .github/scripts/apply_accounting_review_fixes.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: address accounting bridge review findings"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
