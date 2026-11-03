@@ -168,7 +168,7 @@ class PATSACBR_Admin_Settings {
     }
 
     public function sanitize_retry_attempts($value) {
-        return max(1, min(10, absint($value)));
+        return max(0, min(10, absint($value)));
     }
 
     public function sanitize_due_days($value) {
@@ -192,7 +192,7 @@ class PATSACBR_Admin_Settings {
                 $gateway_id = $gateway->id;
                 register_setting('patsacbr_invoice_settings', 'patsacbr_payment_terms_' . $gateway_id, array(
                     'type' => 'string',
-                    'sanitize_callback' => 'sanitize_text_field'
+                    'sanitize_callback' => 'sanitize_textarea_field'
                 ));
                 register_setting('patsacbr_invoice_settings', 'patsacbr_payment_due_days_' . $gateway_id, array(
                     'type' => 'string',
@@ -498,11 +498,11 @@ class PATSACBR_Admin_Settings {
                             <code style="font-size: 11px; color: #666;"> <?php echo esc_html($gateway_id); ?></code>
                         </td>
                         <td>
-                            <input type="text"
+                            <textarea
                                    name="patsacbr_payment_terms_<?php echo esc_attr($gateway_id); ?>"
-                                   value="<?php echo esc_attr($payment_terms); ?>"
+                                   rows="2"
                                    class="widefat"
-                                   placeholder="<?php echo esc_attr($default_terms ?: __('Use default', 'patsch9-accounting-bridge')); ?>">
+                                   placeholder="<?php echo esc_attr($default_terms ?: __('Use default', 'patsch9-accounting-bridge')); ?>"><?php echo esc_textarea($payment_terms); ?></textarea>
                         </td>
                         <td>
                             <input type="number"
@@ -627,7 +627,11 @@ class PATSACBR_Admin_Settings {
         check_admin_referer('patsacbr_process_queue_now');
 
         $result = PATSACBR_Queue_Handler::process_next_item();
-        $status = is_wp_error($result) ? 'error' : 'processed';
+        if (is_wp_error($result)) {
+            $status = 'no_items' === $result->get_error_code() ? 'empty' : 'error';
+        } else {
+            $status = 'processed';
+        }
         wp_safe_redirect(add_query_arg(
             array('page' => 'patsacbr-settings', 'tab' => 'logs', 'patsacbr_queue_notice' => $status),
             admin_url('admin.php')
@@ -706,6 +710,8 @@ class PATSACBR_Admin_Settings {
         $queue_notice = isset($_GET['patsacbr_queue_notice']) ? sanitize_key(wp_unslash($_GET['patsacbr_queue_notice'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display-only redirect status.
         if ('processed' === $queue_notice) {
             echo '<div class="notice notice-success"><p>' . esc_html__('Queue item processed successfully!', 'patsch9-accounting-bridge') . '</p></div>';
+        } elseif ('empty' === $queue_notice) {
+            echo '<div class="notice notice-info"><p>' . esc_html__('No due items in the queue', 'patsch9-accounting-bridge') . '</p></div>';
         } elseif ('error' === $queue_notice) {
             echo '<div class="notice notice-error"><p>' . esc_html__('The queue item could not be processed. See the error log for details.', 'patsch9-accounting-bridge') . '</p></div>';
         } elseif ('cleared' === $queue_notice) {

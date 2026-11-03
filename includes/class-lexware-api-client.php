@@ -35,27 +35,52 @@ class PATSACBR_API_Client {
      * Respektiert Rate Limits und wartet bei Bedarf
      */
     private function enforce_rate_limit() {
-        $now = microtime(true);
+        global $wpdb;
 
-        // Entferne alte Einträge außerhalb des Zeitfensters
-        $this->request_times = array_filter($this->request_times, function($time) use ($now) {
-            return ($now - $time) < self::RATE_LIMIT_WINDOW;
-        });
+        // Lexware applies one shared limit across endpoints. Serialize slot
+        // allocation across PHP workers so concurrent downloads, queue workers
+        // and reconciliation jobs cannot independently exceed the API limit.
+        $slot_interval = (self::RATE_LIMIT_WINDOW / self::RATE_LIMIT_REQUESTS) + 0.02;
+        $option_name = 'patsacbr_lexware_next_request_at';
+        $lock = 'patsacbr_lexware_rate_' . substr(hash('sha256', DB_NAME . '|' . $wpdb->prefix), 0, 40);
+        $acquired = '0';
 
-        // Wenn wir das Limit erreicht haben, warte
-        if (count($this->request_times) >= self::RATE_LIMIT_REQUESTS) {
-            // Warte auf den ältesten Request
-            $oldest = min($this->request_times);
-            $wait_time = self::RATE_LIMIT_WINDOW - ($now - $oldest) + 0.01; // 10ms Puffer
-
-            if ($wait_time > 0) {
-                usleep($wait_time * 1000000); // Convert to microseconds
-                $this->request_times = array(); // Reset nach Warten
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Cross-request advisory lock serializes the shared remote API rate limit.
+            $acquired = (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, %d)', $lock, 2));
+            if ('1' === $acquired) {
+                break;
             }
+            usleep(250000);
         }
 
-        // Tracke diesen Request
-        $this->request_times[] = microtime(true);
+        if ('1' !== $acquired) {
+            // Fail conservatively if the coordination lock itself is unavailable.
+            usleep((int) ceil(self::RATE_LIMIT_WINDOW * 1000000));
+            return;
+        }
+
+        $slot = microtime(true);
+        try {
+            // Avoid a request-local/persistent option cache hiding a slot reserved
+            // by another worker immediately before this lock was acquired.
+            wp_cache_delete($option_name, 'options');
+            $now = microtime(true);
+            $next = (float) get_option($option_name, 0);
+            if ($next < ($now - (self::RATE_LIMIT_WINDOW * 10))) {
+                $next = $now;
+            }
+            $slot = max($now, $next);
+            update_option($option_name, $slot + $slot_interval, false);
+        } finally {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Release the matching advisory lock.
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
+        }
+
+        $wait_time = $slot - microtime(true);
+        if ($wait_time > 0) {
+            usleep((int) ceil($wait_time * 1000000));
+        }
     }
     /**
      * Prüft, ob ein Item ein Wertgutschein ist (Germanized Plugin)
@@ -583,7 +608,7 @@ class PATSACBR_API_Client {
             return new WP_Error(
                 'draft_invoice_cannot_be_credited',
                 __('The Lexware invoice is still a draft and cannot be credited as a follow-up document through the API. Please check/finalize the invoice in Lexware.', 'patsch9-accounting-bridge'),
-                array('retryable' => false)
+                array('retryable' => false, 'manual_check' => true)
             );
         }
         // If Lexware already knows a credit note relation that is not the one
@@ -1056,8 +1081,10 @@ class PATSACBR_API_Client {
         return $net != 0.0 ? round(((float) $order->get_shipping_tax() / $net) * 100, 2) : 0.0;
     }
     private function get_payment_terms_for_order($order) {
-        $payment_method = $order->get_payment_method();
-        $specific_terms = get_option('patsacbr_payment_terms_' . $payment_method, '');
+        $payment_method = (string) $order->get_payment_method();
+        $specific_terms = '' !== $payment_method
+            ? get_option('patsacbr_payment_terms_' . $payment_method, '')
+            : '';
         $terms = !empty($specific_terms)
             ? (string) $specific_terms
             : (string) get_option('patsacbr_payment_terms', __('Payable within 14 days without deduction.', 'patsch9-accounting-bridge'));
@@ -1092,8 +1119,10 @@ class PATSACBR_API_Client {
         return $terms;
     }
     private function get_payment_due_days_for_order($order) {
-        $payment_method = $order->get_payment_method();
-        $specific_days = get_option('patsacbr_payment_due_days_' . $payment_method, '');
+        $payment_method = (string) $order->get_payment_method();
+        $specific_days = '' !== $payment_method
+            ? get_option('patsacbr_payment_due_days_' . $payment_method, '')
+            : '';
         if ($specific_days !== '' && $specific_days !== false) {
             return (int) $specific_days;
         }
@@ -1104,10 +1133,12 @@ class PATSACBR_API_Client {
 
         // Formatiere Preis ohne HTML
         $total_formatted = number_format_i18n($order->get_total(), 2) . ' ' . $order->get_currency();
+        $created = $order->get_date_created();
+        $order_date_formatted = $created ? wc_format_datetime($created, get_option('date_format')) : '';
 
         $replace = array(
             '[order_number]'     => $order->get_order_number(),
-            '[order_date]'       => date_i18n(get_option('date_format'), strtotime($order->get_date_created())),
+            '[order_date]'       => $order_date_formatted,
             '[customer_name]'    => $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
             '[customer_company]' => $order->get_billing_company(),
             '[total]'            => $total_formatted,
@@ -1410,7 +1441,16 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
             return is_scalar($data) || $data === null ? $data : '[object]';
         }
         $redacted = array();
-        $sensitive_keys = array('email', 'phone', 'street', 'zip', 'city', 'name', 'supplement', 'address', 'request_data', 'api_key', 'authorization', 'x-goog-api-key');
+        $sensitive_keys = array(
+            'email', 'emailaddress', 'emailaddresses',
+            'phone', 'phonenumber', 'phonenumbers',
+            'firstname', 'lastname', 'name', 'supplement',
+            'street', 'zip', 'city', 'address', 'addresses',
+            'taxnumber', 'vatregistrationid',
+            'company', 'companyname', 'contactperson', 'contactpersons',
+            'title', 'introduction', 'remark',
+            'request_data', 'api_key', 'authorization', 'x-goog-api-key',
+        );
         foreach ($data as $key => $value) {
             $normalized = strtolower((string)$key);
             if (in_array($normalized, $sensitive_keys, true)) {
@@ -1457,7 +1497,11 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
         update_option('patsacbr_error_logs', $errors);
         if (get_option('patsacbr_email_on_error', 'yes') === 'yes') {
             $admin_email = get_option('admin_email');
-            if (is_email($admin_email)) {
+            $safe_title = $this->redact_log_string($title);
+            $safe_message = $this->redact_log_string($message);
+            $cooldown_key = 'patsacbr_error_mail_' . substr(hash('sha256', $safe_title . '|' . $safe_message), 0, 32);
+            if (is_email($admin_email) && false === get_transient($cooldown_key)) {
+                set_transient($cooldown_key, 1, 10 * MINUTE_IN_SECONDS);
                 wp_mail(
                     $admin_email,
                     __('[Patsch9 Accounting Bridge] Error', 'patsch9-accounting-bridge'),
@@ -1468,13 +1512,14 @@ public function find_invoice_by_order($order, $cutoff_timestamp = 0) {
 Message: %2$s
 
 Time: %3$s', 'patsch9-accounting-bridge'),
-                        $this->redact_log_string($title),
-                        $this->redact_log_string($message),
+                        $safe_title,
+                        $safe_message,
                         current_time('mysql')
                     )
                 );
             }
         }
+
     }
 }
 

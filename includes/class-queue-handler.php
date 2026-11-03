@@ -22,7 +22,9 @@ class PATSACBR_Queue_Handler {
 
     private function __construct() {
         add_action('patsacbr_process_queue', array($this, 'process_queue'));
+        add_filter('cron_schedules', array($this, 'add_cron_interval'));
         add_action('action_scheduler_init', array($this, 'setup_scheduler'), 20);
+        add_action('init', array($this, 'setup_fallback_cron_if_needed'), 25);
         add_action('patsacbr_cleanup_scheduler', array($this, 'cleanup_scheduler'));
     }
 
@@ -31,13 +33,20 @@ class PATSACBR_Queue_Handler {
             $this->setup_fallback_cron();
             return;
         }
+        // Remove an old WP-Cron fallback after Action Scheduler becomes available.
+        wp_clear_scheduled_hook('patsacbr_process_queue');
         if (!as_has_scheduled_action('patsacbr_process_queue', array(), self::GROUP)) {
             as_schedule_recurring_action(time() + 10, 60, 'patsacbr_process_queue', array(), self::GROUP, true);
         }
     }
 
+    public function setup_fallback_cron_if_needed() {
+        if (!function_exists('as_schedule_recurring_action')) {
+            $this->setup_fallback_cron();
+        }
+    }
+
     private function setup_fallback_cron() {
-        add_filter('cron_schedules', array($this, 'add_cron_interval'));
         if (!wp_next_scheduled('patsacbr_process_queue')) {
             wp_schedule_event(time() + 10, 'patsacbr_every_minute', 'patsacbr_process_queue');
         }
@@ -138,7 +147,7 @@ class PATSACBR_Queue_Handler {
         global $wpdb;
         $this->recover_stale_items();
         $table = $wpdb->prefix . 'patsacbr_queue';
-        $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
+        $max_attempts = 1 + max(0, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
         $now = current_time('mysql');
 
         // Several candidates are tried because another worker may claim one between SELECT and UPDATE.
@@ -177,7 +186,7 @@ class PATSACBR_Queue_Handler {
             return new WP_Error('invalid_queue_target', esc_html__('Invalid queue action.', 'patsch9-accounting-bridge'));
         }
         $table = $wpdb->prefix . 'patsacbr_queue';
-        $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
+        $max_attempts = 1 + max(0, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
         $now = current_time('mysql');
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Plugin-owned transactional queue state must be read/written fresh for deduplication and atomic worker claiming; WordPress provides no CRUD API for this table.
         $id = $wpdb->get_var($wpdb->prepare(
@@ -325,6 +334,9 @@ class PATSACBR_Queue_Handler {
             $retryable = is_array($data) && !empty($data['retryable']);
             $ambiguous = is_array($data) && !empty($data['ambiguous_write']);
             $manual_check = is_array($data) && !empty($data['manual_check']);
+            if ('draft_invoice_cannot_be_credited' === $result->get_error_code()) {
+                $order->add_order_note($result->get_error_message());
+            }
             $this->mark_as_failed($item, $result->get_error_message(), $retryable, ($ambiguous || $manual_check));
             return $result;
         }
@@ -503,7 +515,7 @@ class PATSACBR_Queue_Handler {
     private function mark_as_failed($item, $error_message, $retryable, $ambiguous = false) {
         global $wpdb;
         $table = $wpdb->prefix . 'patsacbr_queue';
-        $max_attempts = max(1, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
+        $max_attempts = 1 + max(0, min(10, absint(get_option('patsacbr_retry_attempts', 3))));
         $attempts = max(1, absint($item->attempts));
         $retry = !$ambiguous && $retryable && $attempts < $max_attempts;
         $manual_check = (bool) $ambiguous;

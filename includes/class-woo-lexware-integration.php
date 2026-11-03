@@ -153,16 +153,30 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
      * Speichert manuell eingegebene Rechnungsdaten
      */
     public function save_manual_invoice_data($order_id) {
+        $order_id = absint($order_id);
+        if (!$order_id) {
+            return;
+        }
+
         // Sicherheitsprüfung
         if (!isset($_POST['patsacbr_manual_invoice_nonce']) || !is_string($_POST['patsacbr_manual_invoice_nonce']) ||
             !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_nonce'])), 'patsacbr_save_manual_invoice_' . $order_id)) {
             return;
         }
 
-        // Berechtigungsprüfung
-        if (!current_user_can('edit_shop_orders')) {
+        // Manual financial links use the same capability as the other plugin
+        // administration actions. This remains storage-agnostic under HPOS.
+        if (!current_user_can('manage_woocommerce')) {
             return;
         }
+
+        // Legacy storage/sync mode can fire both registered save hooks in one
+        // request. Process each order only once to avoid duplicate notes/writes.
+        static $processed_orders = array();
+        if (isset($processed_orders[$order_id])) {
+            return;
+        }
+        $processed_orders[$order_id] = true;
 
         // Read request data in the same scope as nonce verification. The locked
         // callback receives only sanitized values, never the mutable request.

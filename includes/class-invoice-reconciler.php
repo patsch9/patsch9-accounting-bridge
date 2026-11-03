@@ -35,6 +35,9 @@ class PATSACBR_Invoice_Reconciler {
     }
 
     public function maybe_schedule() {
+        if (!is_admin() && !wp_doing_cron() && !(defined('WP_CLI') && WP_CLI)) {
+            return;
+        }
         if (self::VERSION === (string) get_option('patsacbr_invoice_reconciliation_version', '')) {
             return;
         }

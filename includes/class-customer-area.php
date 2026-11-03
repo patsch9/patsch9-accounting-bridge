@@ -108,6 +108,9 @@ class PATSACBR_Customer_Area {
         if (!$current_user_id || ((int) $order->get_user_id() !== $current_user_id && !current_user_can('manage_woocommerce'))) {
             wp_die(esc_html__('Permission denied', 'patsch9-accounting-bridge'), '', array('response' => 403));
         }
+        if (class_exists('PATSACBR_Security') && !PATSACBR_Security::check_rate_limit('customer_download_invoice', $current_user_id, 10, 60)) {
+            wp_die(esc_html__('Too many requests. Please wait.', 'patsch9-accounting-bridge'), '', array('response' => 429));
+        }
 
         $lexware_invoice_id = $order->get_meta('_patsacbr_lexware_invoice_id');
 
