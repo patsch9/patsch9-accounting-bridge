@@ -153,14 +153,20 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
      * Speichert manuell eingegebene Rechnungsdaten
      */
     public function save_manual_invoice_data($order_id) {
+        $order_id = absint($order_id);
+        if (!$order_id) {
+            return;
+        }
+
         // Sicherheitsprüfung
         if (!isset($_POST['patsacbr_manual_invoice_nonce']) || !is_string($_POST['patsacbr_manual_invoice_nonce']) ||
             !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_nonce'])), 'patsacbr_save_manual_invoice_' . $order_id)) {
             return;
         }
 
-        // Berechtigungsprüfung
-        if (!current_user_can('edit_shop_orders')) {
+        // Manual financial links use the same capability as the other plugin
+        // administration actions. This remains storage-agnostic under HPOS.
+        if (!current_user_can('manage_woocommerce')) {
             return;
         }
 
@@ -171,7 +177,16 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
         $manual_invoice_number = isset($_POST['patsacbr_manual_invoice_number']) && is_string($_POST['patsacbr_manual_invoice_number']) ?
             sanitize_text_field(wp_unslash($_POST['patsacbr_manual_invoice_number'])) : '';
 
-        PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id, $manual_invoice_id, $manual_invoice_number) {
+        // Legacy storage/sync mode can fire both registered save hooks in one
+        // request. De-duplicate only an identical payload that was actually
+        // processed. A busy order lock or a changed payload must remain retryable.
+        static $processed_requests = array();
+        $request_fingerprint = hash('sha256', $manual_invoice_id . "\0" . $manual_invoice_number);
+        if (isset($processed_requests[$order_id][$request_fingerprint])) {
+            return;
+        }
+
+        $save_result = PATSACBR_Queue_Handler::with_order_lock($order_id, function() use ($order_id, $manual_invoice_id, $manual_invoice_number) {
             $order = wc_get_order($order_id);
             if (!$order) {
                 return;
@@ -208,6 +223,13 @@ The invoice will remain in Lexware, but you will be able to create a new invoice
                 $order->add_order_note(esc_html__('Manual Lexware link not saved: Please provide a valid Lexware UUID and a complete invoice number.', 'patsch9-accounting-bridge'));
             }
         });
+
+        if (!is_wp_error($save_result)) {
+            if (!isset($processed_requests[$order_id])) {
+                $processed_requests[$order_id] = array();
+            }
+            $processed_requests[$order_id][$request_fingerprint] = true;
+        }
     }
 
     public function render_order_metabox($post_or_order) {

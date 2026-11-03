@@ -113,7 +113,7 @@ def cleanup(repo, *, run_id=None, release_tag=None):
     deleted, freed, errors = 0, 0, 0
     for artifact in artifacts:
         name = artifact["name"]
-        if artifact.get("expired") or not (name == "release-assets" or name.startswith("p9-rezeptwerk-")):
+        if artifact.get("expired") or not (name == "release-assets" or name.startswith("patsch9-accounting-bridge-")):
             continue
         artifact_run_id = artifact["workflow_run"]["id"]
         try:

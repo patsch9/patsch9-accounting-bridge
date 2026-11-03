@@ -38,6 +38,7 @@ $patsacbr_options_to_delete = array(
     'patsacbr_payment_scope',
     'patsacbr_payment_methods',
     'patsacbr_retry_attempts',
+    'patsacbr_lexware_next_request_at',
     'patsacbr_invoice_title',
     'patsacbr_invoice_introduction',
     'patsacbr_payment_terms',
@@ -160,6 +161,8 @@ delete_transient('patsacbr_api_test_result');
 $patsacbr_transient_prefixes = array(
     '_transient_patsacbr_rate_limit_',
     '_transient_timeout_patsacbr_rate_limit_',
+    '_transient_patsacbr_error_mail_',
+    '_transient_timeout_patsacbr_error_mail_',
     '_transient_' . $patsacbr_legacy_prefix . 'rate_limit_',
     '_transient_timeout_' . $patsacbr_legacy_prefix . 'rate_limit_',
 );
