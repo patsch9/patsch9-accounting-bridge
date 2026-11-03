@@ -14,7 +14,6 @@ class PATSACBR_API_Client {
     const VOUCHER_PREFIX = 'Wertgutschein'; // Germanized Wertgutschein Präfix
 
     private $api_key;
-    private $request_times = array(); // Für Tracking der Requests im Zeitfenster
     public function __construct() {
         $key = defined('PATSACBR_LEXWARE_API_KEY') && is_scalar(PATSACBR_LEXWARE_API_KEY)
             ? trim((string) PATSACBR_LEXWARE_API_KEY)

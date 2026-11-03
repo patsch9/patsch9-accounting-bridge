@@ -69,6 +69,7 @@ class PATSACBR_Queue_Handler {
             as_unschedule_all_actions('patsacbr_process_queue');
         }
         wp_clear_scheduled_hook('patsacbr_process_queue');
+        delete_option('patsacbr_lexware_next_request_at');
     }
 
     private static function allowed_actions() {

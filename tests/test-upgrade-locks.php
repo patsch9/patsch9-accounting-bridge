@@ -171,8 +171,14 @@ try {
     }
     $_POST = $form();
     $_POST['patsacbr_manual_invoice_id'] = 'not-a-uuid';
+    $notes_before_duplicate_save = count(wc_get_order_notes(['order_id' => $manual_order_id]));
+    $integration->save_manual_invoice_data($manual_order_id);
     $integration->save_manual_invoice_data($manual_order_id);
     $check('' === $manual_meta('_patsacbr_lexware_invoice_id'), 'Malformed UUID prevents manual link');
+    $check(
+        ($notes_before_duplicate_save + 1) === count(wc_get_order_notes(['order_id' => $manual_order_id])),
+        'Duplicate order-save hooks add only one invalid-link note'
+    );
     $_POST = $form();
     unset($_POST['patsacbr_manual_invoice_number']);
     $integration->save_manual_invoice_data($manual_order_id);
