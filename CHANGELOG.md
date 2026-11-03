@@ -2,12 +2,17 @@
 
 Alle stabilen Releases ab Oktober 2026 verwenden das in [VERSIONING.md](VERSIONING.md) dokumentierte Schema `YYYY.M.PATCH`.
 
-## 2026.11.1-beta1 – Noch nicht veröffentlicht
+## 2026.11.1 – 2026-11-03
 
 - Belegerstellung nach Zahlungsart auswählbar; bestehende Installationen behalten „Alle Zahlungsarten“.
 - Auswahl greift für automatische, manuelle und Sammelaktionen sowie bei der Verarbeitung bereits wartender Aufträge.
 - Rechnungsersetzung wird vor der Gutschrift gestoppt, wenn die Zahlungsart ausgeschlossen ist. Gutschriften vorhandener Rechnungen bleiben möglich.
-- Deutsche Übersetzungen, Deinstallationsbereinigung und 14 fokussierte Regressionstests ergänzt.
+- API-Logs schwärzen zusätzliche personenbezogene Felder; Kundendownloads werden pro Benutzer begrenzt.
+- Lexware-API-Limits werden prozessübergreifend koordiniert, wiederholte Fehler-E-Mails erhalten einen Cooldown.
+- Queue-Retry-Semantik und WP-Cron-Fallback korrigiert; doppelte Verarbeitung durch gleichzeitig ausgelöste Legacy-/Sync-Hooks verhindert.
+- Historische Reconciliation aus normalen Frontend-Requests verschoben; manuelle Lexware-Aktionen verwenden einheitlich WooCommerce-Berechtigungen.
+- WooCommerce-Bestelldatum wird über die WooCommerce-Datumslogik formatiert; zahlungsartspezifische Zahlungsbedingungen unterstützen mehrere Zeilen.
+- Deutsche Übersetzungen, Deinstallationsbereinigung und zusätzliche Sicherheits-/Queue-Regressionstests ergänzt.
 
 ## 2026.10.8 – Noch nicht veröffentlicht
 
